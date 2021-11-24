@@ -3,7 +3,7 @@ use windows::{
 };
 
 unsafe fn enum_system_display_modes() -> Result<()> {
-    let d3d9:Option<IDirect3D9> = Direct3DCreate9(D3D_SDK_VERSION);
+    let d3d9: Option<IDirect3D9> = Direct3DCreate9(D3D_SDK_VERSION);
 
     match d3d9 {
         Some(d3d_object) => {
@@ -29,7 +29,9 @@ unsafe fn enum_system_display_modes() -> Result<()> {
                 }
             }
 
-            drop(d3d_object);
+            // This is done automatically when goes out of scope, here the implementation of drop
+            // is a call to COM Release, using knowo position in vtable for IUnknown
+            // drop(d3d_object);
 
             Ok(())
         }
@@ -38,5 +40,5 @@ unsafe fn enum_system_display_modes() -> Result<()> {
 }
 
 fn main() -> Result<()> {
-    unsafe { return enum_system_display_modes() };
+    unsafe { return enum_system_display_modes(); };
 }
