@@ -11,4 +11,4 @@ To compile, requires to place these static library files at same level of Cargo.
 
 Edit in `build.rs` file the location of the legacy DXSDK.
 
-Copy from sample code the resource files (BMP files) into project root directory.
+Copy from Book resources the resource files (BMP files) into project root directory.
