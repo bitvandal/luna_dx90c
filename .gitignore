@@ -8,3 +8,4 @@ legacy_stdio_definitions.lib
 d3dx9.lib
 
 *.bmp
+*.fx
