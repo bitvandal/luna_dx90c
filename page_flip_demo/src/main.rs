@@ -134,7 +134,7 @@ impl D3DApp {
 
             AdjustWindowRect(&mut r, WS_OVERLAPPEDWINDOW, false);
 
-            let main_wnd_caption = PSTR(b"Gfx-Stats Demo\0".as_ptr() as _);
+            let main_wnd_caption = PSTR(b"Page Flip Demo\0".as_ptr() as _);
 
             self.main_wnd = CreateWindowExA(
                 WINDOW_EX_STYLE(0),
