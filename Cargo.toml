@@ -1,0 +1,13 @@
+[workspace]
+members = [
+    "luna_01_hello_direct3d",
+    "luna_02_enum_display_adapters",
+    "luna_03_gfx_stats_demo",
+    "luna_04_sprite_demo",
+    "luna_05_page_flip_demo",
+    "luna_06_cube_demo",
+    "luna_07_tri_grid_demo",
+    "luna_08_mesh_demo",
+    "luna_09_colored_cube_demo",
+    "luna_10_colored_waves_demo"
+]
