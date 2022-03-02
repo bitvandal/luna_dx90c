@@ -1,6 +1,6 @@
 # Topic
 
-Diffuse Demo.
+Diffuse Pyramid Demo.
 
 To compile, requires to place these static library files at the ``dependencies`` directory at the root level of the
 project:
