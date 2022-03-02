@@ -13,5 +13,6 @@ members = [
     "luna_11_diffuse_demo",
     "luna_12_diffuse_pyramid_demo",
     "luna_13_diffuse_cube_demo",
-    "luna_14_ambient_diffuse_demo"
+    "luna_14_ambient_diffuse_demo",
+    "luna_15_ambient_diffuse_specular_demo"
 ]
