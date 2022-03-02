@@ -9,5 +9,6 @@ members = [
     "luna_07_tri_grid_demo",
     "luna_08_mesh_demo",
     "luna_09_colored_cube_demo",
-    "luna_10_colored_waves_demo"
+    "luna_10_colored_waves_demo",
+    "luna_11_diffuse_demo"
 ]
