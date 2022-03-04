@@ -17,5 +17,6 @@ members = [
     "luna_15_ambient_diffuse_specular_demo",
     "luna_16_point_light_demo",
     "luna_17_spotlight_demo",
-    "luna_18_crate_demo"
+    "luna_18_crate_demo",
+    "luna_19_tiled_ground_demo"
 ]

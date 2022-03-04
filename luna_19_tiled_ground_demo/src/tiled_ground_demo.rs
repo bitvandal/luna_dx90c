@@ -6,13 +6,16 @@ use windows::{
 use crate::*;
 
 // Sample demo
-pub struct CrateDemo {
+pub struct TiledGroundDemo {
     d3d_pp: *const D3DPRESENT_PARAMETERS,
     gfx_stats: Option<GfxStats>,
 
-    box_vb: IDirect3DVertexBuffer9,
-    box_ib: IDirect3DIndexBuffer9,
-    crate_tex: *mut c_void, //IDirect3DTexture9,
+    num_grid_vertices: u32,
+    num_grid_triangles: u32,
+
+    grid_vb: IDirect3DVertexBuffer9,
+    grid_ib: IDirect3DIndexBuffer9,
+    ground_tex: *mut c_void, //IDirect3DTexture9,
 
     fx: LPD3DXEFFECT,
 
@@ -49,34 +52,39 @@ pub struct CrateDemo {
     proj: D3DXMATRIX,
 }
 
-impl CrateDemo {
-    pub fn new(d3d_device: IDirect3DDevice9, d3d_pp: *const D3DPRESENT_PARAMETERS) -> Option<CrateDemo> {
-        if !CrateDemo::check_device_caps() {
+impl TiledGroundDemo {
+    pub fn new(d3d_device: IDirect3DDevice9, d3d_pp: *const D3DPRESENT_PARAMETERS) -> Option<TiledGroundDemo> {
+        if !TiledGroundDemo::check_device_caps() {
             display_error_then_quit("checkDeviceCaps() Failed");
         }
 
         let mut gfx_stats = GfxStats::new(d3d_device.clone());
-        if let Some(gfx_stats) = &mut gfx_stats {
-            gfx_stats.add_vertices(24);
-            gfx_stats.add_triangles(12);
-        }
 
-        let (box_vb, box_ib) = CrateDemo::build_box_geometry(d3d_device.clone());
+        let (box_vb, box_ib) = TiledGroundDemo::build_grid_geometry(d3d_device.clone());
 
         let (fx, h_tech, h_wvp, h_world_inverse_transpose, h_light_vec_w,
             h_diffuse_mtrl, h_diffuse_light, h_ambient_mtrl, h_ambient_light,
             h_specular_mtrl, h_specular_light, h_specular_power,
             h_eyepos, h_world, h_tex) =
-            CrateDemo::build_fx(d3d_device.clone());
+            TiledGroundDemo::build_fx(d3d_device.clone());
 
-        let mut light_vec_w = D3DXVECTOR3 { x: 0.0, y: 0.0, z: -1.0 };
+        // Save vertex count and triangle count for DrawIndexedPrimitive arguments.
+        let num_grid_vertices = 100 * 100;
+        let num_grid_triangles = 99 * 99 * 2;
+
+        if let Some(gfx_stats) = &mut gfx_stats {
+            gfx_stats.add_vertices(num_grid_vertices);
+            gfx_stats.add_triangles(num_grid_triangles);
+        }
+
+        let mut light_vec_w = D3DXVECTOR3 { x: 0.0, y: 0.707, z: -0.707 };
         D3DXVec3Normalize(&mut light_vec_w, &light_vec_w);
 
         let diffuse_mtrl = D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
         let diffuse_light = D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
         let ambient_mtrl = D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
         let ambient_light = D3DXCOLOR { r: 0.6, g: 0.6, b: 0.6, a: 1.0 };
-        let specular_mtrl = D3DXCOLOR { r: 0.8, g: 0.8, b: 0.8, a: 1.0 };
+        let specular_mtrl = D3DXCOLOR { r: 0.4, g: 0.4, b: 0.4, a: 1.0 };
         let specular_light = D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
         let specular_power = 8.0;
 
@@ -86,15 +94,18 @@ impl CrateDemo {
         init_all_vertex_declarations(d3d_device.clone());
 
         let mut crate_tex: *mut c_void = std::ptr::null_mut();
-        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_18_crate_demo/crate.jpg\0".as_ptr() as _), &mut crate_tex));
+        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_19_tiled_ground_demo/ground0.dds\0".as_ptr() as _), &mut crate_tex));
 
-        let mut crate_demo = CrateDemo {
+        let mut tiled_ground_demo = TiledGroundDemo {
             d3d_pp,
             gfx_stats,
 
-            box_vb,
-            box_ib,
-            crate_tex,
+            num_grid_vertices,
+            num_grid_triangles,
+
+            grid_vb: box_vb,
+            grid_ib: box_ib,
+            ground_tex: crate_tex,
 
             fx,
 
@@ -131,9 +142,9 @@ impl CrateDemo {
             proj: unsafe { std::mem::zeroed() },
         };
 
-        crate_demo.on_reset_device();
+        tiled_ground_demo.on_reset_device();
 
-        Some(crate_demo)
+        Some(tiled_ground_demo)
     }
 
     pub fn release_com_objects(&self) {
@@ -142,7 +153,7 @@ impl CrateDemo {
         }
 
         ReleaseCOM(self.fx);
-        ReleaseCOM(self.crate_tex);
+        ReleaseCOM(self.ground_tex);
 
         destroy_all_vertex_declarations();
     }
@@ -265,20 +276,20 @@ impl CrateDemo {
                 HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_specular_light, &self.specular_light as *const _ as _, std::mem::size_of::<D3DXCOLOR>() as u32));
                 HR!(ID3DXBaseEffect_SetFloat(self.fx, self.h_specular_power, self.specular_power));
                 HR!(ID3DXBaseEffect_SetMatrix(self.fx, self.h_world, &self.world));
-                HR!(ID3DXBaseEffect_SetTexture(self.fx, self.h_tex, self.crate_tex));
+                HR!(ID3DXBaseEffect_SetTexture(self.fx, self.h_tex, self.ground_tex));
 
                 // Let Direct3D know the vertex buffer, index buffer and vertex
                 // declaration we are using.
                 HR!(d3d_device.SetVertexDeclaration(&VERTEX_PNT_DECL));
-                HR!(d3d_device.SetStreamSource(0, &self.box_vb, 0, std::mem::size_of::<VertexPNT>() as u32));
-                HR!(d3d_device.SetIndices(&self.box_ib));
+                HR!(d3d_device.SetStreamSource(0, &self.grid_vb, 0, std::mem::size_of::<VertexPNT>() as u32));
+                HR!(d3d_device.SetIndices(&self.grid_ib));
 
                 // Begin passes.
                 let mut num_passes: u32 = 0;
                 HR!(ID3DXEffect_Begin(self.fx, &mut num_passes, 0));
                 for i in 0..num_passes {
                     HR!(ID3DXEffect_BeginPass(self.fx, i));
-                    HR!(d3d_device.DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, 24, 0, 12));
+                    HR!(d3d_device.DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, self.num_grid_vertices, 0, self.num_grid_triangles));
                     HR!(ID3DXEffect_EndPass(self.fx));
                 }
                 HR!(ID3DXEffect_End(self.fx));
@@ -298,105 +309,63 @@ impl CrateDemo {
         }
     }
 
-    fn build_box_geometry(d3d_device: IDirect3DDevice9) -> (IDirect3DVertexBuffer9, IDirect3DIndexBuffer9) {
+    fn build_grid_geometry(d3d_device: IDirect3DDevice9) -> (IDirect3DVertexBuffer9, IDirect3DIndexBuffer9) {
         unsafe {
+            let mut verts: Vec<D3DXVECTOR3> = Vec::new();
+            let mut indices: Vec<u16> = Vec::new();
+
+            gen_tri_grid(100, 100, 1.0, 1.0,
+                         D3DXVECTOR3 { x: 0.0, y: 0.0, z: 0.0 }, &mut verts, &mut indices);
+
             let mut vb: Option<IDirect3DVertexBuffer9> = None;
 
             // Obtain a pointer to a new vertex buffer.
-            HR!(d3d_device.CreateVertexBuffer((24 * std::mem::size_of::<VertexPNT>()) as u32,
-                D3DUSAGE_WRITEONLY as u32, 0, D3DPOOL_MANAGED, &mut vb, std::ptr::null_mut()));
+            HR!(d3d_device.CreateVertexBuffer((verts.len() * std::mem::size_of::<VertexPNT>()) as u32,
+            D3DUSAGE_WRITEONLY as u32, 0, D3DPOOL_MANAGED, &mut vb, std::ptr::null_mut()));
 
-            let cube_vertices: [VertexPNT; 24] = [
-                // fill in the front face vertex data
-                VertexPNT { pos: D3DXVECTOR3 { x: -1.0, y: -1.0, z: -1.0 }, normal: D3DXVECTOR3 { x:  0.0, y:  0.0, z: -1.0 }, tex0: D3DXVECTOR2 { x: 0.0, y: 1.0 }},
-                VertexPNT { pos: D3DXVECTOR3 { x: -1.0, y:  1.0, z: -1.0 }, normal: D3DXVECTOR3 { x:  0.0, y:  0.0, z: -1.0 }, tex0: D3DXVECTOR2 { x: 0.0, y: 0.0 }},
-                VertexPNT { pos: D3DXVECTOR3 { x:  1.0, y:  1.0, z: -1.0 }, normal: D3DXVECTOR3 { x:  0.0, y:  0.0, z: -1.0 }, tex0: D3DXVECTOR2 { x: 1.0, y: 0.0 }},
-                VertexPNT { pos: D3DXVECTOR3 { x:  1.0, y: -1.0, z: -1.0 }, normal: D3DXVECTOR3 { x:  0.0, y:  0.0, z: -1.0 }, tex0: D3DXVECTOR2 { x: 1.0, y: 1.0 }},
-
-                // fill in the back face vertex data
-                VertexPNT { pos: D3DXVECTOR3 { x: -1.0, y: -1.0, z:  1.0 }, normal: D3DXVECTOR3 { x:  0.0, y:  0.0, z:  1.0 }, tex0: D3DXVECTOR2 { x: 1.0, y: 1.0 }},
-                VertexPNT { pos: D3DXVECTOR3 { x:  1.0, y: -1.0, z:  1.0 }, normal: D3DXVECTOR3 { x:  0.0, y:  0.0, z:  1.0 }, tex0: D3DXVECTOR2 { x: 0.0, y: 1.0 }},
-                VertexPNT { pos: D3DXVECTOR3 { x:  1.0, y:  1.0, z:  1.0 }, normal: D3DXVECTOR3 { x:  0.0, y:  0.0, z:  1.0 }, tex0: D3DXVECTOR2 { x: 0.0, y: 0.0 }},
-                VertexPNT { pos: D3DXVECTOR3 { x: -1.0, y:  1.0, z:  1.0 }, normal: D3DXVECTOR3 { x:  0.0, y:  0.0, z:  1.0 }, tex0: D3DXVECTOR2 { x: 1.0, y: 0.0 }},
-
-                // fill in the top face vertex data
-                VertexPNT { pos: D3DXVECTOR3 { x: -1.0, y:  1.0, z: -1.0 }, normal: D3DXVECTOR3 { x:  0.0, y:  1.0, z:  0.0 }, tex0: D3DXVECTOR2 { x: 0.0, y: 1.0 }},
-                VertexPNT { pos: D3DXVECTOR3 { x: -1.0, y:  1.0, z:  1.0 }, normal: D3DXVECTOR3 { x:  0.0, y:  1.0, z:  0.0 }, tex0: D3DXVECTOR2 { x: 0.0, y: 0.0 }},
-                VertexPNT { pos: D3DXVECTOR3 { x:  1.0, y:  1.0, z:  1.0 }, normal: D3DXVECTOR3 { x:  0.0, y:  1.0, z:  0.0 }, tex0: D3DXVECTOR2 { x: 1.0, y: 0.0 }},
-                VertexPNT { pos: D3DXVECTOR3 { x:  1.0, y:  1.0, z: -1.0 }, normal: D3DXVECTOR3 { x:  0.0, y:  1.0, z:  0.0 }, tex0: D3DXVECTOR2 { x: 1.0, y: 1.0 }},
-
-                // fill in the bottom face vertex data
-                VertexPNT { pos: D3DXVECTOR3 { x: -1.0, y: -1.0, z: -1.0 }, normal: D3DXVECTOR3 { x:  0.0, y: -1.0, z:  0.0 }, tex0: D3DXVECTOR2 { x: 1.0, y: 1.0 }},
-                VertexPNT { pos: D3DXVECTOR3 { x:  1.0, y: -1.0, z: -1.0 }, normal: D3DXVECTOR3 { x:  0.0, y: -1.0, z:  0.0 }, tex0: D3DXVECTOR2 { x: 0.0, y: 1.0 }},
-                VertexPNT { pos: D3DXVECTOR3 { x:  1.0, y: -1.0, z:  1.0 }, normal: D3DXVECTOR3 { x:  0.0, y: -1.0, z:  0.0 }, tex0: D3DXVECTOR2 { x: 0.0, y: 0.0 }},
-                VertexPNT { pos: D3DXVECTOR3 { x: -1.0, y: -1.0, z:  1.0 }, normal: D3DXVECTOR3 { x:  0.0, y: -1.0, z:  0.0 }, tex0: D3DXVECTOR2 { x: 1.0, y: 0.0 }},
-
-                // fill in the left face vertex data
-                VertexPNT { pos: D3DXVECTOR3 { x: -1.0, y: -1.0, z:  1.0 }, normal: D3DXVECTOR3 { x: -1.0, y:  0.0, z:  0.0 }, tex0: D3DXVECTOR2 { x: 0.0, y: 1.0 }},
-                VertexPNT { pos: D3DXVECTOR3 { x: -1.0, y:  1.0, z:  1.0 }, normal: D3DXVECTOR3 { x: -1.0, y:  0.0, z:  0.0 }, tex0: D3DXVECTOR2 { x: 0.0, y: 0.0 }},
-                VertexPNT { pos: D3DXVECTOR3 { x: -1.0, y:  1.0, z: -1.0 }, normal: D3DXVECTOR3 { x: -1.0, y:  0.0, z:  0.0 }, tex0: D3DXVECTOR2 { x: 1.0, y: 0.0 }},
-                VertexPNT { pos: D3DXVECTOR3 { x: -1.0, y: -1.0, z: -1.0 }, normal: D3DXVECTOR3 { x: -1.0, y:  0.0, z:  0.0 }, tex0: D3DXVECTOR2 { x: 1.0, y: 1.0 }},
-
-                // fill in the right face vertex data
-                VertexPNT { pos: D3DXVECTOR3 { x:  1.0, y: -1.0, z: -1.0 }, normal: D3DXVECTOR3 { x:  1.0, y:  0.0, z:  0.0 }, tex0: D3DXVECTOR2 { x: 0.0, y: 1.0 }},
-                VertexPNT { pos: D3DXVECTOR3 { x:  1.0, y:  1.0, z: -1.0 }, normal: D3DXVECTOR3 { x:  1.0, y:  0.0, z:  0.0 }, tex0: D3DXVECTOR2 { x: 0.0, y: 0.0 }},
-                VertexPNT { pos: D3DXVECTOR3 { x:  1.0, y:  1.0, z:  1.0 }, normal: D3DXVECTOR3 { x:  1.0, y:  0.0, z:  0.0 }, tex0: D3DXVECTOR2 { x: 1.0, y: 0.0 }},
-                VertexPNT { pos: D3DXVECTOR3 { x:  1.0, y: -1.0, z:  1.0 }, normal: D3DXVECTOR3 { x:  1.0, y:  0.0, z:  0.0 }, tex0: D3DXVECTOR2 { x: 1.0, y: 1.0 }},
-            ];
-
-            // Now lock it to obtain a pointer to its internal data, and write the
-            // cube's vertex data.  Note also that in this demo we don't use an index
-            // buffer.
             if let Some(vb) = &mut vb {
+                // Now lock it to obtain a pointer to its internal data, and write the
+                // grid's vertex data.
                 let mut v = std::ptr::null_mut();
                 HR!(vb.Lock(0, 0, &mut v, 0));
 
-                std::ptr::copy_nonoverlapping(cube_vertices.as_ptr(),
+                let tex_scale: f32 = 0.2;
+
+                let num_grid_vertices = 100 * 100;
+                let mut verts_pnt: Vec<VertexPNT> = Vec::with_capacity(num_grid_vertices);
+                for i in 0..100 {
+                    for j in 0..100 {
+                        let index = i * 100 + j;
+                        verts_pnt.insert(index, VertexPNT {
+                            pos: verts[index],
+                            normal: D3DXVECTOR3 { x: 0.0, y: 1.0, z: 0.0 },
+                            tex0: D3DXVECTOR2 { x: j as f32 * tex_scale, y: i as f32 * tex_scale }
+                        });
+                    }
+                }
+
+                std::ptr::copy_nonoverlapping(verts_pnt.as_ptr(),
                                               v as *mut VertexPNT,
-                                              cube_vertices.len());
+                                              num_grid_vertices);
+
                 HR!(vb.Unlock());
             }
 
+            // Obtain a pointer to a new index buffer.
             let mut ib: Option<IDirect3DIndexBuffer9> = None;
 
             // Obtain a pointer to a new index buffer.
-            HR!(d3d_device.CreateIndexBuffer(36 * std::mem::size_of::<u16>() as u32,
+            HR!(d3d_device.CreateIndexBuffer((indices.len() * std::mem::size_of::<u16>()) as u32,
             D3DUSAGE_WRITEONLY as u32, D3DFMT_INDEX16, D3DPOOL_MANAGED, &mut ib, std::ptr::null_mut()));
-
-            let mut k: [u16; 36] = [0; 36];
-
-            // Front face.
-            k[0] = 0; k[1] = 1; k[2] = 2;
-            k[3] = 0; k[4] = 2; k[5] = 3;
-
-            // Back face.
-            k[6] = 4; k[7]  = 5; k[8]  = 6;
-            k[9] = 4; k[10] = 6; k[11] = 7;
-
-            // Top face.
-            k[12] = 8; k[13] = 9; k[14] = 10;
-            k[15] = 8; k[16] = 10; k[17] = 11;
-
-            // Bottom face.
-            k[18] = 12; k[19] = 13; k[20] = 14;
-            k[21] = 12; k[22] = 14; k[23] = 15;
-
-            // Left face.
-            k[24] = 16; k[25] = 17; k[26] = 18;
-            k[27] = 16; k[28] = 18; k[29] = 19;
-
-            // Right face.
-            k[30] = 20; k[31] = 21; k[32] = 22;
-            k[33] = 20; k[34] = 22; k[35] = 23;
 
             if let Some(ib) = &mut ib {
                 // Now lock it to obtain a pointer to its internal data, and write the
-                // cube's index data.
+                // grid's index data.
                 let mut i = std::ptr::null_mut();
                 HR!(ib.Lock(0, 0, &mut i, 0));
-                std::ptr::copy_nonoverlapping(k.as_ptr(),
+                std::ptr::copy_nonoverlapping(indices.as_ptr(),
                                               i as *mut u16,
-                                              k.len());
+                                              indices.len());
                 HR!(ib.Unlock());
             }
 
@@ -429,7 +398,7 @@ impl CrateDemo {
         let mut fx: LPD3DXEFFECT = std::ptr::null_mut();
         let mut errors: LPD3DXBUFFER = std::ptr::null_mut();
 
-        HR!(D3DXCreateEffectFromFile(d3d_device, PSTR(b"luna_18_crate_demo/dirLightTex.fx\0".as_ptr() as _),
+        HR!(D3DXCreateEffectFromFile(d3d_device, PSTR(b"luna_19_tiled_ground_demo/dirLightTex.fx\0".as_ptr() as _),
         std::ptr::null(), std::ptr::null(), D3DXSHADER_DEBUG,
         std::ptr::null(), &mut fx, &mut errors));
 
