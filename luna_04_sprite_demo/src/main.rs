@@ -1,5 +1,4 @@
 mod d3d9_extra;
-mod d3dx;
 mod direct_input;
 mod gfx_stats;
 mod sprite_demo;
@@ -13,11 +12,11 @@ use windows::{
     Win32::Devices::HumanInterfaceDevice::*
 };
 
+use d3dx::*;
 use std::ffi::{CStr};
 
 use crate::sprite_demo::*;
 use crate::d3d9_extra::*;
-use crate::d3dx::*;
 use crate::direct_input::*;
 use crate::gfx_stats::*;
 use crate::utils::*;

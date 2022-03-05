@@ -1,8 +1,11 @@
 // Rewrite of D3D9 functions and macros not provided by windows crate.
 
-use windows::core::*;
 use libc::c_char;
-use crate::*;
+use std::ffi::CStr;
+use windows::core::*;
+use windows::Win32::Graphics::Direct3D9::_FACD3D;
+
+use crate::{clean_func_call, message_box};
 
 // from winerror.h
 
@@ -20,10 +23,6 @@ macro_rules! MAKE_HRESULT {
 }
 
 // from d3d9.h
-
-macro_rules! _FACD3D {
-    ($) => { 0x876 }
-}
 
 macro_rules! MAKE_D3DHRESULT {
     ($code:expr) => {

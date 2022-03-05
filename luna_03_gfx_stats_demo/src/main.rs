@@ -1,5 +1,4 @@
 mod d3d9_extra;
-mod d3dx;
 mod gfx_stats;
 mod utils;
 

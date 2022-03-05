@@ -1,5 +1,4 @@
 pub mod d3d9_extra;
-pub mod d3dx;
 pub mod direct_input;
 pub mod gfx_stats;
 pub mod spotlight_demo;
@@ -14,11 +13,11 @@ use windows::{
     Win32::Devices::HumanInterfaceDevice::*
 };
 
+use d3dx::*;
 use std::ffi::{CStr};
 
 use crate::spotlight_demo::*;
 use crate::d3d9_extra::*;
-use crate::d3dx::*;
 use crate::direct_input::*;
 use crate::gfx_stats::*;
 use crate::utils::*;
@@ -136,7 +135,7 @@ impl D3DApp {
 
             AdjustWindowRect(&mut r, WS_OVERLAPPEDWINDOW, false);
 
-            let main_wnd_caption = PSTR(b"Point Light Demo\0".as_ptr() as _);
+            let main_wnd_caption = PSTR(b"Spotight Demo\0".as_ptr() as _);
 
             self.main_wnd = CreateWindowExA(
                 WINDOW_EX_STYLE(0),

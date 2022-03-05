@@ -1,5 +1,4 @@
 mod d3d9_extra;
-mod d3dx;
 mod utils;
 
 use windows::{
@@ -9,14 +8,14 @@ use windows::{
     Win32::System::Threading::*,
 };
 
+use d3dx::*;
 use libc::*;
 use rand::{Rng, thread_rng};
 use rand::rngs::ThreadRng;
-use std::ffi::{CStr, c_void};
+use std::ffi::c_void;
 use std::ptr::null_mut;
 
 use crate::d3d9_extra::*;
-use crate::d3dx::*;
 use crate::utils::*;
 
 // D3D App
@@ -64,7 +63,7 @@ fn main() {
 
         if let Some(d3d_app) = &mut D3D_APP {
             if let Some(d3d_device) = D3D_DEVICE.clone() {
-                let font_desc = D3DXFONT_DESC {
+                let font_desc = d3dx::D3DXFONT_DESC {
                     Height: 80,
                     Width: 40,
                     Weight: FW_BOLD,

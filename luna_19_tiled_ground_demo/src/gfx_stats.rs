@@ -5,7 +5,6 @@ use windows::{
 };
 
 use crate::d3d9_extra::*;
-use crate::d3dx::*;
 use crate::*;
 
 pub struct GfxStats {

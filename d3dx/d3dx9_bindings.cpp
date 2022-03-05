@@ -122,6 +122,10 @@ extern "C" HRESULT D3DX_ID3DXBaseEffect_SetFloat(LPD3DXBASEEFFECT self, D3DXHAND
     return self->SetFloat(hParameter, f);
 }
 
+extern "C" HRESULT D3DX_ID3DXBaseEffect_SetTexture(LPD3DXBASEEFFECT self, D3DXHANDLE hParameter, LPDIRECT3DBASETEXTURE9 pTexture) {
+    return self->SetTexture(hParameter, pTexture);
+}
+
 extern "C" HRESULT D3DX_ID3DXBaseEffect_SetValue(LPD3DXBASEEFFECT self, D3DXHANDLE hParameter, LPCVOID pData, UINT Bytes) {
     return self->SetValue(hParameter, pData, Bytes);
 }
@@ -178,6 +182,10 @@ extern "C" D3DXVECTOR3* D3DX_Vec3Add(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV1, 
     return D3DXVec3Add(pOut, pV1, pV2);
 }
 
+extern "C" D3DXVECTOR3* D3DX_Vec3Subtract(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV1, const D3DXVECTOR3 *pV2) {
+    return D3DXVec3Subtract(pOut, pV1, pV2);
+}
+
 extern "C" D3DXMATRIX* D3DX_MatrixLookAtLH(D3DXMATRIX *pOut, const D3DXVECTOR3 *pEye, const D3DXVECTOR3 *pAt, const D3DXVECTOR3 *pUp) {
     return D3DXMatrixLookAtLH(pOut, pEye, pAt, pUp);
 }
@@ -220,4 +228,8 @@ extern "C" D3DXMATRIX* D3DX_MatrixTranspose(D3DXMATRIX *pOut, const D3DXMATRIX *
 
 extern "C" D3DXVECTOR3* D3DX_Vec3TransformCoord(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV, const D3DXMATRIX *pM) {
     return D3DXVec3TransformCoord(pOut, pV, pM);
+}
+
+extern "C" D3DXVECTOR3* D3DX_Vec3Normalize(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV) {
+    return D3DXVec3Normalize(pOut, pV);
 }

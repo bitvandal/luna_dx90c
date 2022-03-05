@@ -4,8 +4,9 @@ use windows::{
     Win32::Foundation::*, Win32::Graphics::Direct3D9::*, Win32::Graphics::Gdi::*,
 };
 
+use d3dx::*;
+
 use crate::d3d9_extra::*;
-use crate::d3dx::*;
 use crate::*;
 
 pub struct GfxStats {

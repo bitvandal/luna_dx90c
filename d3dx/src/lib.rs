@@ -7,7 +7,8 @@ use windows::{
     core::*, Win32::Foundation::*, Win32::Graphics::Direct3D::*, Win32::Graphics::Direct3D9::*,
 };
 
-use crate::{D3DCOLOR, d3dx};
+// D3DCOLOR is equivalent to D3DFMT_A8R8G8B8
+type D3DCOLOR = u32;
 
 // struct D3DXFONT_DESCA (ANSI)
 #[allow(non_snake_case)]
@@ -36,10 +37,14 @@ pub type D3DXMATRIX = D3DMATRIX;
 
 pub type LPD3DXVECTOR3 = *mut c_void;
 
+#[repr(C)]
+pub struct D3DXVECTOR2 {
+    pub x: f32,
+    pub y: f32,
+}
+
 pub const D3DX_PI: f32 = 3.141592654;
 
-
-// from D3dx9math.h
 #[repr(C)]
 pub struct D3DXCOLOR {
     pub r: f32,
@@ -49,7 +54,7 @@ pub struct D3DXCOLOR {
 }
 
 impl D3DXCOLOR {
-    pub fn mult(&self, k: f32) -> d3dx::D3DXCOLOR {
+    pub fn mult(&self, k: f32) -> D3DXCOLOR {
         D3DXCOLOR { r: k * self.r, g: k * self.g, b: k * self.b, a: self.a }
     }
 }
@@ -88,7 +93,7 @@ pub type LPD3DXMESH = *mut c_void;
 // D3DX Functions
 
 #[allow(non_snake_case)]
-#[link(name = "dependencies/d3dx9", kind = "static")]
+#[link(name = "../dependencies/d3dx9", kind = "static")]
 #[link(name = "d3dx9_bindings", kind = "static")]
 extern {
     // ULONG IUnknown::Release()
@@ -178,6 +183,9 @@ extern {
     // HRESULT ID3DXBaseEffect::SetFloat(D3DXHANDLE hParameter, FLOAT f)
     fn D3DX_ID3DXBaseEffect_SetFloat(pEffect: *const c_void, hParameter: D3DXHANDLE, f: f32) -> D3DX_HRESULT;
 
+    // HRESULT SetTexture(D3DXHANDLE hParameter, LPDIRECT3DBASETEXTURE9 pTexture);
+    fn D3DX_ID3DXBaseEffect_SetTexture(pEffect: *const c_void, hParameter: D3DXHANDLE, pTexture: *const c_void) -> D3DX_HRESULT;
+
     // HRESULT SetValue(D3DXHANDLE hParameter, LPCVOID pData, UINT Bytes)
     fn D3DX_ID3DXBaseEffect_SetValue(pEffect: *const c_void, hParameter: D3DXHANDLE, pData: *const c_void, bytes: u32) -> D3DX_HRESULT;
 
@@ -203,7 +211,7 @@ extern {
     // HRESULT D3DXCreateSphere(LPDIRECT3DDEVICE9 pDevice, FLOAT Radius, UINT Slices, UINT Stacks,
     //                          LPD3DXMESH *ppMesh, LPD3DXBUFFER *ppAdjacency)
     fn D3DX_CreateSphere(pDevice: IDirect3DDevice9, Radius: f32, Slices: u32, Stacks: u32,
-                        ppMesh: *mut LPD3DXMESH, ppAdjacency: *mut LPD3DXBUFFER) -> D3DX_HRESULT;
+                         ppMesh: *mut LPD3DXMESH, ppAdjacency: *mut LPD3DXBUFFER) -> D3DX_HRESULT;
 
     // HRESULT D3DXCreateTeapot(LPDIRECT3DDEVICE9 pDevice, LPD3DXMESH *ppMesh,
     //                          LPD3DXBUFFER *ppAdjacency);
@@ -229,9 +237,6 @@ extern {
 
     // D3DXVECTOR3* D3DXVec3Subtract(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV1, const D3DXVECTOR3 *pV1)
     fn D3DX_Vec3Subtract(pOut: *mut D3DXVECTOR3, pV1: *const D3DXVECTOR3, pV2: *const D3DXVECTOR3) -> *mut D3DXVECTOR3;
-
-    // D3DXVECTOR3* D3DXVec3Normalize(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV)
-    fn D3DX_Vec3Normalize(pOut: *mut D3DXVECTOR3, pV: *const D3DXVECTOR3) -> *mut D3DXVECTOR3;
 
     // D3DXMATRIX* D3DXMatrixLookAtLH(D3DXMATRIX *pOut, const D3DXVECTOR3 *pEye, const D3DXVECTOR3 *pAt, const D3DXVECTOR3 *pUp)
     fn D3DX_MatrixLookAtLH(pOut: *mut D3DXMATRIX, pEye: *const D3DXVECTOR3, pAt: *const D3DXVECTOR3,
@@ -266,6 +271,9 @@ extern {
 
     // D3DXVECTOR3* D3DXVec3TransformCoord(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV, const D3DXMATRIX *pM)
     fn D3DX_Vec3TransformCoord(pOut: *mut D3DXVECTOR3, pV: *const D3DXVECTOR3, pM: *const D3DXMATRIX) -> *mut D3DXVECTOR3;
+
+    // D3DXVECTOR3* D3DXVec3Normalize(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV)
+    fn D3DX_Vec3Normalize(pOut: *mut D3DXVECTOR3, pV: *const D3DXVECTOR3) -> *mut D3DXVECTOR3;
 }
 
 fn to_result(code: D3DX_HRESULT) -> Result<()> {
@@ -298,7 +306,7 @@ pub fn D3DXCreateFontIndirect(pDevice: IDirect3DDevice9, font_desc: D3DXFONT_DES
 
 #[allow(non_snake_case)]
 pub fn ID3DXFont_DrawText(pFont: *const c_void, pSprite: *const c_void, pString: PSTR, Count: i32,
-                      pRect: &RECT, Format: u32, Color: D3DCOLOR) -> i32 {
+                          pRect: &RECT, Format: u32, Color: D3DCOLOR) -> i32 {
     unsafe { D3DX_ID3DXFont_DrawText(pFont, pSprite, pString, Count, pRect, Format, Color) }
 }
 
@@ -426,6 +434,11 @@ pub fn ID3DXBaseEffect_SetFloat(pEffect: *const c_void, hParameter: D3DXHANDLE, 
 }
 
 #[allow(non_snake_case)]
+pub fn ID3DXBaseEffect_SetTexture(pEffect: *const c_void, hParameter: D3DXHANDLE, pTexture: *const c_void) -> Result<()> {
+    unsafe { to_result(D3DX_ID3DXBaseEffect_SetTexture(pEffect, hParameter, pTexture)) }
+}
+
+#[allow(non_snake_case)]
 pub fn ID3DXBaseEffect_SetValue(pEffect: *const c_void, hParameter: D3DXHANDLE, pData: *const c_void, bytes: u32) -> Result<()> {
     unsafe { to_result(D3DX_ID3DXBaseEffect_SetValue(pEffect, hParameter, pData, bytes)) }
 }
@@ -447,10 +460,10 @@ pub fn ID3DXBuffer_GetBufferPointer(pBuffer: *const c_void) -> *mut c_void {
 
 #[allow(non_snake_case)]
 pub fn D3DXCreateCylinder(pDevice: IDirect3DDevice9, Radius1: f32, Radius2: f32, Length: f32,
-                       Slices: u32, Stacks: u32, ppMesh: *mut LPD3DXMESH,
-                       ppAdjacency: *mut LPD3DXBUFFER) -> Result<()> {
+                          Slices: u32, Stacks: u32, ppMesh: *mut LPD3DXMESH,
+                          ppAdjacency: *mut LPD3DXBUFFER) -> Result<()> {
     unsafe { to_result(D3DX_CreateCylinder(pDevice, Radius1, Radius2, Length, Slices,
-                                                Stacks, ppMesh, ppAdjacency)) }
+                                           Stacks, ppMesh, ppAdjacency)) }
 }
 
 #[allow(non_snake_case)]
@@ -491,24 +504,19 @@ pub fn D3DXVec3Subtract(pOut: *mut D3DXVECTOR3, pV1: *const D3DXVECTOR3, pV2: *c
 }
 
 #[allow(non_snake_case)]
-pub fn D3DXVec3Normalize(pOut: *mut D3DXVECTOR3, pV: *const D3DXVECTOR3) -> *mut D3DXVECTOR3 {
-    unsafe { D3DX_Vec3Normalize(pOut, pV) }
-}
-
-#[allow(non_snake_case)]
 pub fn D3DXVec3Scale(pOut: *mut D3DXVECTOR3, pV: *const D3DXVECTOR3, s: f32) -> *mut D3DXVECTOR3 {
     unsafe { D3DX_Vec3Scale(pOut, pV, s) }
 }
 
 #[allow(non_snake_case)]
 pub fn D3DXMatrixLookAtLH(pOut: *mut D3DXMATRIX, pEye: *const D3DXVECTOR3, pAt: *const D3DXVECTOR3,
-                       pUp: *const D3DXVECTOR3) -> *const D3DXMATRIX {
+                          pUp: *const D3DXVECTOR3) -> *const D3DXMATRIX {
     unsafe { D3DX_MatrixLookAtLH(pOut, pEye, pAt, pUp) }
 }
 
 #[allow(non_snake_case)]
 pub fn D3DXMatrixPerspectiveFovLH(pOut: *mut D3DXMATRIX, fovy: f32, Aspect: f32,
-                              zn: f32, zf: f32) -> *mut D3DXMATRIX {
+                                  zn: f32, zf: f32) -> *mut D3DXMATRIX {
     unsafe { D3DX_MatrixPerspectiveFovLH(pOut, fovy, Aspect, zn, zf) }
 }
 
@@ -556,4 +564,9 @@ pub fn D3DXMatrixTranspose(pOut: *mut D3DXMATRIX, pM: *const D3DXMATRIX) -> *mut
 pub fn D3DXVec3TransformCoord(pOut: *mut D3DXVECTOR3 , pV: *const D3DXVECTOR3,
                               pM: *const D3DXMATRIX) -> *mut D3DXVECTOR3 {
     unsafe { D3DX_Vec3TransformCoord(pOut, pV, pM) }
+}
+
+#[allow(non_snake_case)]
+pub fn D3DXVec3Normalize(pOut: *mut D3DXVECTOR3 , pV: *const D3DXVECTOR3) -> *mut D3DXVECTOR3 {
+    unsafe { D3DX_Vec3Normalize(pOut, pV) }
 }
