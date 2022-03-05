@@ -1,8 +1,4 @@
-pub mod d3d9_extra;
-pub mod direct_input;
-pub mod gfx_stats;
 pub mod tri_grid_demo;
-pub mod utils;
 pub mod vertex;
 
 use windows::{
@@ -13,14 +9,11 @@ use windows::{
     Win32::Devices::HumanInterfaceDevice::*
 };
 
+use common::*;
 use d3dx::*;
 use std::ffi::{CStr};
 
 use crate::tri_grid_demo::*;
-use crate::d3d9_extra::*;
-use crate::direct_input::*;
-use crate::gfx_stats::*;
-use crate::utils::*;
 use crate::vertex::*;
 
 // D3D App

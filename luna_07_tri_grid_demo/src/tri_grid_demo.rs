@@ -30,7 +30,7 @@ impl TriGridDemo {
             display_error_then_quit("checkDeviceCaps() Failed");
         }
 
-        let gfx_stats = GfxStats::new(d3d_device.clone());
+        let gfx_stats = GfxStats::new(d3d_device.clone(), D3DCOLOR_XRGB!(0, 0, 0));
 
         let (vb, ib) = build_geo_buffers(d3d_device.clone());
 

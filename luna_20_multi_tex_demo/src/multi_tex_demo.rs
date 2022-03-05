@@ -65,7 +65,7 @@ impl MultiTexDemo {
             display_error_then_quit("checkDeviceCaps() Failed");
         }
 
-        let mut gfx_stats = GfxStats::new(d3d_device.clone());
+        let mut gfx_stats = GfxStats::new(d3d_device.clone(), D3DCOLOR_XRGB!(0, 0, 0));
 
         let (box_vb, box_ib) = MultiTexDemo::build_grid_geometry(d3d_device.clone());
 

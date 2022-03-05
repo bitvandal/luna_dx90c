@@ -81,7 +81,7 @@ impl SpotlightDemo {
             display_error_then_quit("checkDeviceCaps() Failed");
         }
 
-        let mut gfx_stats = GfxStats::new(d3d_device.clone());
+        let mut gfx_stats = GfxStats::new(d3d_device.clone(), D3DCOLOR_XRGB!(0, 0, 0));
 
         let ambient_light = D3DXCOLOR::mult(&WHITE, 0.4);
         let diffuse_light = WHITE;

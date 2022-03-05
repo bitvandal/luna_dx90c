@@ -55,7 +55,7 @@ impl CrateDemo {
             display_error_then_quit("checkDeviceCaps() Failed");
         }
 
-        let mut gfx_stats = GfxStats::new(d3d_device.clone());
+        let mut gfx_stats = GfxStats::new(d3d_device.clone(), D3DCOLOR_XRGB!(0, 0, 0));
         if let Some(gfx_stats) = &mut gfx_stats {
             gfx_stats.add_vertices(24);
             gfx_stats.add_triangles(12);

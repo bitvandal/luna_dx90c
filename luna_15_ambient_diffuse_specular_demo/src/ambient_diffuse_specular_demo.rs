@@ -52,7 +52,7 @@ impl AmbientDiffuseSpecularDemo {
             display_error_then_quit("checkDeviceCaps() Failed");
         }
 
-        let gfx_stats = GfxStats::new(d3d_device.clone());
+        let gfx_stats = GfxStats::new(d3d_device.clone(), D3DCOLOR_XRGB!(0, 0, 0));
 
         let mut teapot: LPD3DXMESH = std::ptr::null_mut();
         HR!(D3DXCreateTeapot(d3d_device.clone(), &mut teapot, std::ptr::null_mut()));

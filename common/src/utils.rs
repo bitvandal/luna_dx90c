@@ -1,12 +1,11 @@
 // Some utilities
 
+use d3dx::*;
 use regex::Regex;
 
 use windows::{
     Win32::Foundation::*, Win32::UI::WindowsAndMessaging::*,
 };
-
-use crate::*;
 
 pub fn gen_tri_grid(num_vert_rows: i32, num_vert_cols: i32, dx: f32, dz: f32,
                     center: D3DXVECTOR3, verts: &mut Vec<D3DXVECTOR3>, indices: &mut Vec<u16>) {
@@ -100,6 +99,7 @@ pub fn display_error_then_quit(err_msg: &str) {
     }
 }
 
+#[allow(non_snake_case)]
 #[macro_export]
 macro_rules! HR {
     ($func_call:expr) => {

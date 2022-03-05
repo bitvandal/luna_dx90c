@@ -1,6 +1,3 @@
-mod d3d9_extra;
-mod utils;
-
 use windows::{
     Win32::Foundation::*, Win32::System::LibraryLoader::GetModuleHandleA,
     Win32::Graphics::Direct3D9::*, Win32::Graphics::Gdi::*, Win32::UI::WindowsAndMessaging::*,
@@ -8,15 +5,13 @@ use windows::{
     Win32::System::Threading::*,
 };
 
+use common::*;
 use d3dx::*;
 use libc::*;
 use rand::{Rng, thread_rng};
 use rand::rngs::ThreadRng;
 use std::ffi::c_void;
 use std::ptr::null_mut;
-
-use crate::d3d9_extra::*;
-use crate::utils::*;
 
 // D3D App
 struct D3DApp {

@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "d3dx",
+    "common",
     "luna_01_hello_direct3d",
     "luna_02_enum_display_adapters",
     "luna_03_gfx_stats_demo",

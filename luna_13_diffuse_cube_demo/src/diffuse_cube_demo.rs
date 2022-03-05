@@ -40,7 +40,7 @@ impl DiffuseCubeDemo {
             display_error_then_quit("checkDeviceCaps() Failed");
         }
 
-        let gfx_stats = GfxStats::new(d3d_device.clone());
+        let gfx_stats = GfxStats::new(d3d_device.clone(), D3DCOLOR_XRGB!(0, 0, 0));
 
         let vb = DiffuseCubeDemo::build_vertex_buffer(d3d_device.clone());
         let ib = DiffuseCubeDemo::build_index_buffer(d3d_device.clone());

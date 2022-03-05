@@ -8,8 +8,8 @@ libc = "0.2.0"
 rand = "0.8.4"
 regex = "1"
 
-[build-dependencies]
-cc = "1.0"
+[dependencies.common]
+path = "../common"
 
 [dependencies.d3dx]
 path = "../d3dx"

@@ -3,6 +3,8 @@ use windows::{
     Win32::System::SystemServices::*,
 };
 
+use common::*;
+use d3dx::*;
 use libc::*;
 use crate::*;
 
@@ -21,7 +23,7 @@ impl PageFlipDemo {
             display_error_then_quit("checkDeviceCaps() Failed");
         }
 
-        let gfx_stats = GfxStats::new(d3d_device.clone());
+        let gfx_stats = GfxStats::new(d3d_device.clone(), D3DCOLOR_XRGB!(255, 255, 255));
 
         let mut sprite: *mut c_void = std::ptr::null_mut();
         HR!(D3DXCreateSprite(d3d_device.clone(), &mut sprite));

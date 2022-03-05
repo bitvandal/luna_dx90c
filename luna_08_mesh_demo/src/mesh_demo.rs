@@ -32,7 +32,7 @@ impl MeshDemo {
             display_error_then_quit("checkDeviceCaps() Failed");
         }
 
-        let mut gfx_stats = GfxStats::new(d3d_device.clone());
+        let mut gfx_stats = GfxStats::new(d3d_device.clone(), D3DCOLOR_XRGB!(0, 0, 0));
 
         let (vb, ib) = build_geo_buffers(d3d_device.clone());
 

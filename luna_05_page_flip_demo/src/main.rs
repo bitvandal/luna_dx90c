@@ -1,8 +1,4 @@
-pub mod d3d9_extra;
-pub mod direct_input;
-pub mod gfx_stats;
 pub mod page_flip_demo;
-pub mod utils;
 
 use windows::{
     Win32::Foundation::*, Win32::System::LibraryLoader::GetModuleHandleA,
@@ -12,14 +8,9 @@ use windows::{
     Win32::Devices::HumanInterfaceDevice::*
 };
 
-use d3dx::*;
-use std::ffi::{CStr};
+use common::*;
 
 use crate::page_flip_demo::*;
-use crate::d3d9_extra::*;
-use crate::direct_input::*;
-use crate::gfx_stats::*;
-use crate::utils::*;
 
 // D3D App
 pub struct D3DApp {

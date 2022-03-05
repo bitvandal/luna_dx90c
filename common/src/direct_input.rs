@@ -104,19 +104,19 @@ impl DirectInput {
         }
     }
 
-    pub fn key_down(&self, key: usize) -> bool {
+    pub fn key_down(&mut self, key: usize) -> bool {
         self.keyboard_state[key] & 0x80 != 0
     }
 
-    pub fn mouse_dx(&self) -> f32 {
+    pub fn mouse_dx(&mut self) -> f32 {
         self.mouse_state.lX as f32
     }
 
-    pub fn mouse_dy(&self) -> f32 {
+    pub fn mouse_dy(&mut self) -> f32 {
         self.mouse_state.lY as f32
     }
 
-    pub fn mouse_dz(&self) -> f32 {
+    pub fn mouse_dz(&mut self) -> f32 {
         self.mouse_state.lZ as f32
     }
 }

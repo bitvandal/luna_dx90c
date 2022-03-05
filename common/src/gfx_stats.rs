@@ -4,11 +4,15 @@ use windows::{
     Win32::Foundation::*, Win32::Graphics::Direct3D9::*, Win32::Graphics::Gdi::*,
 };
 
+use d3dx::*;
+
 use crate::d3d9_extra::*;
+
 use crate::*;
 
 pub struct GfxStats {
     font: *mut c_void,
+    font_color: D3DCOLOR,
     fps: f32,
     millisec_per_frame: f32,
     num_tris: u32,
@@ -16,9 +20,10 @@ pub struct GfxStats {
 }
 
 impl GfxStats {
-    pub fn new(d3d_device: IDirect3DDevice9) -> Option<GfxStats> {
+    pub fn new(d3d_device: IDirect3DDevice9, font_color: D3DCOLOR) -> Option<GfxStats> {
         let mut gfx_stats = GfxStats {
             font: std::ptr::null_mut(),
+            font_color,
             fps: 0.0,
             millisec_per_frame: 0.0,
             num_tris: 0,
@@ -128,7 +133,7 @@ impl GfxStats {
                            -1,
                            &r,
                            DT_NOCLIP.0,
-                           D3DCOLOR_XRGB!(0, 0, 0));
+                           self.font_color);
     }
 
     pub fn release_com_objects(&self) {

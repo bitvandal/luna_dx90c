@@ -1,7 +1,3 @@
-mod d3d9_extra;
-mod gfx_stats;
-mod utils;
-
 use windows::{
     Win32::Foundation::*, Win32::System::LibraryLoader::GetModuleHandleA,
     Win32::Graphics::Direct3D9::*, Win32::Graphics::Gdi::*, Win32::UI::WindowsAndMessaging::*,
@@ -9,11 +5,7 @@ use windows::{
     Win32::System::Threading::*, Win32::System::Performance::*,
 };
 
-use std::ffi::{CStr};
-
-use crate::d3d9_extra::*;
-use crate::gfx_stats::*;
-use crate::utils::*;
+use common::*;
 
 // D3D App
 struct D3DApp {
@@ -58,7 +50,7 @@ fn main() {
 
         if let Some(d3d_app) = &mut D3D_APP {
             if let Some(d3d_device) = D3D_DEVICE.clone() {
-                d3d_app.gfx_stats = init_gfx_stats(d3d_device);
+                d3d_app.gfx_stats = GfxStats::new(d3d_device.clone(), D3DCOLOR_XRGB!(0, 0, 0));
 
                 let exit_code = d3d_app.run();
 

@@ -1,13 +1,15 @@
 // Rewrite of D3D9 functions and macros not provided by windows crate.
 
+use libc::c_char;
+use std::ffi::CStr;
 use windows::core::*;
 use windows::Win32::Graphics::Direct3D9::*;
 
-use libc::c_char;
-use crate::*;
+use crate::utils::{clean_func_call, message_box};
 
 // from winerror.h
 
+#[allow(non_snake_case)]
 #[macro_export]
 macro_rules! FAILED {
     ($hr:expr) => {
@@ -15,6 +17,7 @@ macro_rules! FAILED {
     }
 }
 
+#[allow(non_snake_case)]
 macro_rules! MAKE_HRESULT {
     ($sev:expr, $fac:expr, $code:expr) => {
         HRESULT(($sev as u32) << 31 | ($fac as u32) << 16 | ($code as u32))
@@ -23,10 +26,7 @@ macro_rules! MAKE_HRESULT {
 
 // from d3d9.h
 
-macro_rules! _FACD3D {
-    ($) => { 0x876 }
-}
-
+#[allow(non_snake_case)]
 macro_rules! MAKE_D3DHRESULT {
     ($code:expr) => {
         MAKE_HRESULT!(1, _FACD3D, $code)
@@ -42,6 +42,7 @@ pub type D3DCOLOR = u32;
 
 // maps unsigned 8 bits/channel to D3DCOLOR
 
+#[allow(non_snake_case)]
 #[macro_export]
 macro_rules! D3DCOLOR_ARGB {
     ($a:expr, $r:expr, $g:expr, $b:expr) => {
@@ -49,6 +50,7 @@ macro_rules! D3DCOLOR_ARGB {
     }
 }
 
+#[allow(non_snake_case)]
 #[macro_export]
 macro_rules! D3DCOLOR_RGBA {
     ($r:expr, $g:expr, $b:expr, $a:expr) => {
@@ -56,6 +58,7 @@ macro_rules! D3DCOLOR_RGBA {
     }
 }
 
+#[allow(non_snake_case)]
 #[macro_export]
 macro_rules! D3DCOLOR_XRGB {
     ($r:expr, $g:expr, $b:expr) => {
@@ -66,6 +69,7 @@ macro_rules! D3DCOLOR_XRGB {
 // from d3d9types.h
 pub const D3DTS_WORLD: D3DTRANSFORMSTATETYPE = D3DTRANSFORMSTATETYPE(256i32);
 
+#[allow(non_snake_case)]
 #[macro_export]
 macro_rules! D3DDECL_END {
     () => {
@@ -77,6 +81,24 @@ macro_rules! D3DDECL_END {
             Usage: 0,
             UsageIndex: 0,
         }
+    }
+}
+
+#[allow(non_snake_case)]
+#[macro_export]
+// pixel shader version token
+macro_rules! D3DPS_VERSION {
+    ($Major: expr, $Minor: expr) => {
+        (0xFFFF0000 | ($Major << 8) | $Minor)
+    }
+}
+
+#[allow(non_snake_case)]
+#[macro_export]
+// vertex shader version token
+macro_rules! D3DVS_VERSION {
+    ($Major: expr, $Minor: expr) => {
+        (0xFFFE0000 | ($Major << 8) | $Minor)
     }
 }
 
@@ -95,8 +117,8 @@ pub fn DXTrace(file: &str, line: u32, hr: HRESULT, str_msg: &str, pop_msg_box: b
     hr
 }
 
-#[link(name = "dependencies/legacy_stdio_definitions", kind = "static")]
-#[link(name = "dependencies/DxErr", kind = "static")]
+#[link(name = "../dependencies/legacy_stdio_definitions", kind = "static")]
+#[link(name = "../dependencies/DxErr", kind = "static")]
 extern {
     pub fn DXGetErrorStringA(hr: u32) -> *const c_char;
 }

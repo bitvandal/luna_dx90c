@@ -2,6 +2,7 @@ use windows::{
     Win32::Foundation::*, Win32::Graphics::Direct3D9::*, Win32::System::SystemServices::*,
 };
 
+use common::*;
 use crate::*;
 
 // Sample demo
@@ -24,7 +25,7 @@ impl CubeDemo {
             display_error_then_quit("checkDeviceCaps() Failed");
         }
 
-        let gfx_stats = GfxStats::new(d3d_device.clone());
+        let gfx_stats = GfxStats::new(d3d_device.clone(), D3DCOLOR_XRGB!(0, 0, 0));
 
         let mut cube_demo = CubeDemo {
             vb: build_vertex_buffer(d3d_device.clone()),

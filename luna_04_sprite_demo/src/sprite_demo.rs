@@ -3,6 +3,7 @@ use windows::{
     Win32::System::SystemServices::*, Win32::Devices::HumanInterfaceDevice::*
 };
 
+use d3dx::*;
 use libc::*;
 use crate::*;
 
@@ -46,7 +47,7 @@ impl SpriteDemo {
             display_error_then_quit("checkDeviceCaps() Failed");
         }
 
-        let gfx_stats = GfxStats::new(d3d_device.clone());
+        let gfx_stats = GfxStats::new(d3d_device.clone(), D3DCOLOR_XRGB!(255, 255, 255));
 
         let mut sprite: *mut c_void = std::ptr::null_mut();
         HR!(D3DXCreateSprite(d3d_device.clone(), &mut sprite));
@@ -190,7 +191,7 @@ impl SpriteDemo {
     fn update_ship(&mut self, dt: f32) {
         // Check input.
         unsafe {
-            if let Some(dinput) = &DIRECT_INPUT {
+            if let Some(dinput) = &mut DIRECT_INPUT {
                 if dinput.key_down(DIK_A as usize) {
                     self.ship_rotation += 4.0 * dt;
                 }
@@ -236,7 +237,7 @@ impl SpriteDemo {
             // Accumulate time.
             FIRE_DELAY += dt;
 
-            if let Some(dinput) = &DIRECT_INPUT {
+            if let Some(dinput) = &mut DIRECT_INPUT {
                 // Did the user press the spacebar key and has 0.1 seconds passed?
                 // We can only fire one bullet every 0.1 seconds.  If we do not
                 // put this delay in, the ship will fire bullets way too fast.
