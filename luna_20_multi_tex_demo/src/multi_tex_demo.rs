@@ -6,7 +6,7 @@ use windows::{
 use crate::*;
 
 // Sample demo
-pub struct TiledGroundDemo {
+pub struct MultiTexDemo {
     d3d_pp: *const D3DPRESENT_PARAMETERS,
     gfx_stats: Option<GfxStats>,
 
@@ -15,7 +15,11 @@ pub struct TiledGroundDemo {
 
     grid_vb: IDirect3DVertexBuffer9,
     grid_ib: IDirect3DIndexBuffer9,
-    ground_tex: *mut c_void, //IDirect3DTexture9,
+
+    tex0: *mut c_void,      //IDirect3DTexture9,
+    tex1: *mut c_void,      //IDirect3DTexture9,
+    tex2: *mut c_void,      //IDirect3DTexture9,
+    blend_map: *mut c_void, //IDirect3DTexture9,
 
     fx: LPD3DXEFFECT,
 
@@ -32,7 +36,10 @@ pub struct TiledGroundDemo {
     h_specular_power: D3DXHANDLE,
     h_eyepos: D3DXHANDLE,
     h_world: D3DXHANDLE,
-    h_tex: D3DXHANDLE,
+    h_tex0: D3DXHANDLE,
+    h_tex1: D3DXHANDLE,
+    h_tex2: D3DXHANDLE,
+    h_blend_map: D3DXHANDLE,
 
     light_vec_w: D3DXVECTOR3,
     ambient_mtrl: D3DXCOLOR,
@@ -52,21 +59,21 @@ pub struct TiledGroundDemo {
     proj: D3DXMATRIX,
 }
 
-impl TiledGroundDemo {
-    pub fn new(d3d_device: IDirect3DDevice9, d3d_pp: *const D3DPRESENT_PARAMETERS) -> Option<TiledGroundDemo> {
-        if !TiledGroundDemo::check_device_caps() {
+impl MultiTexDemo {
+    pub fn new(d3d_device: IDirect3DDevice9, d3d_pp: *const D3DPRESENT_PARAMETERS) -> Option<MultiTexDemo> {
+        if !MultiTexDemo::check_device_caps() {
             display_error_then_quit("checkDeviceCaps() Failed");
         }
 
         let mut gfx_stats = GfxStats::new(d3d_device.clone());
 
-        let (box_vb, box_ib) = TiledGroundDemo::build_grid_geometry(d3d_device.clone());
+        let (box_vb, box_ib) = MultiTexDemo::build_grid_geometry(d3d_device.clone());
 
         let (fx, h_tech, h_wvp, h_world_inverse_transpose, h_light_vec_w,
             h_diffuse_mtrl, h_diffuse_light, h_ambient_mtrl, h_ambient_light,
             h_specular_mtrl, h_specular_light, h_specular_power,
-            h_eyepos, h_world, h_tex) =
-            TiledGroundDemo::build_fx(d3d_device.clone());
+            h_eyepos, h_world, h_tex0, h_tex1, h_tex2, h_blend_map) =
+            MultiTexDemo::build_fx(d3d_device.clone());
 
         // Save vertex count and triangle count for DrawIndexedPrimitive arguments.
         let num_grid_vertices = 100 * 100;
@@ -93,10 +100,17 @@ impl TiledGroundDemo {
 
         init_all_vertex_declarations(d3d_device.clone());
 
-        let mut ground_tex: *mut c_void = std::ptr::null_mut();
-        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_19_tiled_ground_demo/ground0.dds\0".as_ptr() as _), &mut ground_tex));
+        let mut tex0: *mut c_void = std::ptr::null_mut();
+        let mut tex1: *mut c_void = std::ptr::null_mut();
+        let mut tex2: *mut c_void = std::ptr::null_mut();
+        let mut blend_map: *mut c_void = std::ptr::null_mut();
 
-        let mut tiled_ground_demo = TiledGroundDemo {
+        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_20_multi_tex_demo/grass0.dds\0".as_ptr() as _), &mut tex0));
+        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_20_multi_tex_demo/stone2.dds\0".as_ptr() as _), &mut tex1));
+        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_20_multi_tex_demo/ground0.dds\0".as_ptr() as _), &mut tex2));
+        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_20_multi_tex_demo/blendmap.jpg\0".as_ptr() as _), &mut blend_map));
+
+        let mut multi_tex_demo = MultiTexDemo {
             d3d_pp,
             gfx_stats,
 
@@ -105,7 +119,11 @@ impl TiledGroundDemo {
 
             grid_vb: box_vb,
             grid_ib: box_ib,
-            ground_tex,
+
+            tex0,
+            tex1,
+            tex2,
+            blend_map,
 
             fx,
 
@@ -122,7 +140,10 @@ impl TiledGroundDemo {
             h_specular_power,
             h_eyepos,
             h_world,
-            h_tex,
+            h_tex0,
+            h_tex1,
+            h_tex2,
+            h_blend_map,
 
             light_vec_w,
             ambient_mtrl,
@@ -142,9 +163,9 @@ impl TiledGroundDemo {
             proj: unsafe { std::mem::zeroed() },
         };
 
-        tiled_ground_demo.on_reset_device();
+        multi_tex_demo.on_reset_device();
 
-        Some(tiled_ground_demo)
+        Some(multi_tex_demo)
     }
 
     pub fn release_com_objects(&self) {
@@ -153,7 +174,10 @@ impl TiledGroundDemo {
         }
 
         ReleaseCOM(self.fx);
-        ReleaseCOM(self.ground_tex);
+        ReleaseCOM(self.tex0);
+        ReleaseCOM(self.tex1);
+        ReleaseCOM(self.tex2);
+        ReleaseCOM(self.blend_map);
 
         destroy_all_vertex_declarations();
     }
@@ -276,7 +300,10 @@ impl TiledGroundDemo {
                 HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_specular_light, &self.specular_light as *const _ as _, std::mem::size_of::<D3DXCOLOR>() as u32));
                 HR!(ID3DXBaseEffect_SetFloat(self.fx, self.h_specular_power, self.specular_power));
                 HR!(ID3DXBaseEffect_SetMatrix(self.fx, self.h_world, &self.world));
-                HR!(ID3DXBaseEffect_SetTexture(self.fx, self.h_tex, self.ground_tex));
+                HR!(ID3DXBaseEffect_SetTexture(self.fx, self.h_tex0, self.tex0));
+                HR!(ID3DXBaseEffect_SetTexture(self.fx, self.h_tex1, self.tex1));
+                HR!(ID3DXBaseEffect_SetTexture(self.fx, self.h_tex2, self.tex2));
+                HR!(ID3DXBaseEffect_SetTexture(self.fx, self.h_blend_map, self.blend_map));
 
                 // Let Direct3D know the vertex buffer, index buffer and vertex
                 // declaration we are using.
@@ -329,17 +356,22 @@ impl TiledGroundDemo {
                 let mut v = std::ptr::null_mut();
                 HR!(vb.Lock(0, 0, &mut v, 0));
 
-                let tex_scale: f32 = 0.2;
+                let w: f32 = 99.0;
+                let d: f32 = 99.0;
 
                 let num_grid_vertices = 100 * 100;
                 let mut verts_pnt: Vec<VertexPNT> = Vec::with_capacity(num_grid_vertices);
+
                 for i in 0..100 {
                     for j in 0..100 {
                         let index = i * 100 + j;
                         verts_pnt.insert(index, VertexPNT {
                             pos: verts[index],
                             normal: D3DXVECTOR3 { x: 0.0, y: 1.0, z: 0.0 },
-                            tex0: D3DXVECTOR2 { x: j as f32 * tex_scale, y: i as f32 * tex_scale }
+                            tex0: D3DXVECTOR2 {
+                                x: (verts[index].x + (0.5 * w)) / w,
+                                y: (verts[index].z - (0.5 * d)) / -d
+                            }
                         });
                     }
                 }
@@ -393,12 +425,13 @@ impl TiledGroundDemo {
     fn build_fx(d3d_device: IDirect3DDevice9) -> (LPD3DXEFFECT, D3DXHANDLE, D3DXHANDLE, D3DXHANDLE,
                                                   D3DXHANDLE, D3DXHANDLE, D3DXHANDLE, D3DXHANDLE,
                                                   D3DXHANDLE, D3DXHANDLE, D3DXHANDLE, D3DXHANDLE,
-                                                  D3DXHANDLE, D3DXHANDLE, D3DXHANDLE) {
+                                                  D3DXHANDLE, D3DXHANDLE, D3DXHANDLE, D3DXHANDLE,
+                                                  D3DXHANDLE, D3DXHANDLE) {
         // Create the FX from a .fx file.
         let mut fx: LPD3DXEFFECT = std::ptr::null_mut();
         let mut errors: LPD3DXBUFFER = std::ptr::null_mut();
 
-        HR!(D3DXCreateEffectFromFile(d3d_device, PSTR(b"luna_19_tiled_ground_demo/dirLightTex.fx\0".as_ptr() as _),
+        HR!(D3DXCreateEffectFromFile(d3d_device, PSTR(b"luna_20_multi_tex_demo/TerrainMultiTex.fx\0".as_ptr() as _),
         std::ptr::null(), std::ptr::null(), D3DXSHADER_DEBUG,
         std::ptr::null(), &mut fx, &mut errors));
 
@@ -414,7 +447,7 @@ impl TiledGroundDemo {
         }
 
         // Obtain handles.
-        let h_tech = ID3DXBaseEffect_GetTechniqueByName(fx, PSTR(b"DirLightTexTech\0".as_ptr() as _));
+        let h_tech = ID3DXBaseEffect_GetTechniqueByName(fx, PSTR(b"TerrainMultiTexTech\0".as_ptr() as _));
         let h_wvp = ID3DXBaseEffect_GetParameterByName(fx, std::ptr::null(), PSTR(b"gWVP\0".as_ptr() as _));
         let h_world_inverse_transpose = ID3DXBaseEffect_GetParameterByName(fx, std::ptr::null(), PSTR(b"gWorldInvTrans\0".as_ptr() as _));
         let h_light_vec_w = ID3DXBaseEffect_GetParameterByName(fx, std::ptr::null(), PSTR(b"gLightVecW\0".as_ptr() as _));
@@ -427,11 +460,14 @@ impl TiledGroundDemo {
         let h_specular_power = ID3DXBaseEffect_GetParameterByName(fx, std::ptr::null(), PSTR(b"gSpecularPower\0".as_ptr() as _));
         let h_eyepos = ID3DXBaseEffect_GetParameterByName(fx, std::ptr::null(), PSTR(b"gEyePosW\0".as_ptr() as _));
         let h_world = ID3DXBaseEffect_GetParameterByName(fx, std::ptr::null(), PSTR(b"gWorld\0".as_ptr() as _));
-        let h_tex = ID3DXBaseEffect_GetParameterByName(fx, std::ptr::null(), PSTR(b"gTex\0".as_ptr() as _));
+        let h_tex0 = ID3DXBaseEffect_GetParameterByName(fx, std::ptr::null(), PSTR(b"gTex0\0".as_ptr() as _));
+        let h_tex1 = ID3DXBaseEffect_GetParameterByName(fx, std::ptr::null(), PSTR(b"gTex1\0".as_ptr() as _));
+        let h_tex2 = ID3DXBaseEffect_GetParameterByName(fx, std::ptr::null(), PSTR(b"gTex2\0".as_ptr() as _));
+        let h_blend_map = ID3DXBaseEffect_GetParameterByName(fx, std::ptr::null(), PSTR(b"gBlendMap\0".as_ptr() as _));
 
         (fx, h_tech, h_wvp, h_world_inverse_transpose, h_light_vec_w,
          h_diffuse_mtrl, h_diffuse_light, h_ambient_mtrl, h_ambient_light,
          h_specular_mtrl, h_specular_light, h_specular_power,
-         h_eyepos, h_world, h_tex)
+         h_eyepos, h_world, h_tex0, h_tex1, h_tex2, h_blend_map)
     }
 }
