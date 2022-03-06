@@ -43,6 +43,12 @@ pub struct D3DXVECTOR2 {
     pub y: f32,
 }
 
+impl D3DXVECTOR2 {
+    pub fn add_vec(&self, other: D3DXVECTOR2) -> D3DXVECTOR2 {
+        D3DXVECTOR2 { x: self.x + other.x, y: self.y + other.y }
+    }
+}
+
 pub const D3DX_PI: f32 = 3.14159265358979323846;
 
 #[repr(C)]
