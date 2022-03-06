@@ -84,9 +84,7 @@ impl MultiTexDemo {
             gfx_stats.add_triangles(num_grid_triangles);
         }
 
-        let mut light_vec_w = D3DXVECTOR3 { x: 0.0, y: 0.707, z: -0.707 };
-        D3DXVec3Normalize(&mut light_vec_w, &light_vec_w);
-
+        let light_vec_w = D3DXVECTOR3 { x: 0.0, y: 0.707, z: -0.707 };
         let diffuse_mtrl = D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
         let diffuse_light = D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
         let ambient_mtrl = D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
@@ -413,7 +411,7 @@ impl MultiTexDemo {
         let up = D3DXVECTOR3 { x: 0.0, y: 1.0, z: 0.0 };
         D3DXMatrixLookAtLH(&mut self.view, &pos, &target, &up);
 
-        HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_eyepos, &pos as *const _ as _, std::mem::size_of::<D3DXCOLOR>() as u32));
+        HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_eyepos, &pos as *const _ as _, std::mem::size_of::<D3DXVECTOR3>() as u32));
     }
 
     fn build_proj_mtx(&mut self) {

@@ -1,3 +1,4 @@
+use std::slice::from_raw_parts_mut;
 use libc::c_void;
 use windows::{
     Win32::Foundation::*, Win32::Graphics::Direct3D9::*, Win32::System::SystemServices::*,
@@ -5,14 +6,24 @@ use windows::{
 
 use crate::*;
 
+// Material
+struct Mtrl {
+    pub ambient: D3DXCOLOR,
+    pub diffuse: D3DXCOLOR,
+    pub spec: D3DXCOLOR,
+    pub spec_power: f32,
+}
+
 // Sample demo
-pub struct CrateDemo {
+pub struct TeapotDemo {
     d3d_pp: *const D3DPRESENT_PARAMETERS,
     gfx_stats: Option<GfxStats>,
 
     box_vb: IDirect3DVertexBuffer9,
     box_ib: IDirect3DIndexBuffer9,
+    teapot: LPD3DXMESH,
     crate_tex: *mut c_void, //IDirect3DTexture9,
+    teapot_tex: *mut c_void, //IDirect3DTexture9,
 
     fx: LPD3DXEFFECT,
 
@@ -31,68 +42,98 @@ pub struct CrateDemo {
     h_world: D3DXHANDLE,
     h_tex: D3DXHANDLE,
 
+    crate_mtrl: Mtrl,
+    teapot_mtrl: Mtrl,
+
     light_vec_w: D3DXVECTOR3,
-    ambient_mtrl: D3DXCOLOR,
     ambient_light: D3DXCOLOR,
-    diffuse_mtrl: D3DXCOLOR,
     diffuse_light: D3DXCOLOR,
-    specular_mtrl: D3DXCOLOR,
     specular_light: D3DXCOLOR,
-    specular_power: f32,
 
     camera_rotation_y: f32,
     camera_radius: f32,
     camera_height: f32,
 
-    world: D3DXMATRIX,
+    crate_world: D3DXMATRIX,
+    teapot_world: D3DXMATRIX,
+
     view: D3DXMATRIX,
     proj: D3DXMATRIX,
 }
 
-impl CrateDemo {
-    pub fn new(d3d_device: IDirect3DDevice9, d3d_pp: *const D3DPRESENT_PARAMETERS) -> Option<CrateDemo> {
-        if !CrateDemo::check_device_caps() {
+impl TeapotDemo {
+    pub fn new(d3d_device: IDirect3DDevice9, d3d_pp: *const D3DPRESENT_PARAMETERS) -> Option<TeapotDemo> {
+        if !TeapotDemo::check_device_caps() {
             display_error_then_quit("checkDeviceCaps() Failed");
         }
 
+        init_all_vertex_declarations(d3d_device.clone());
+
         let mut gfx_stats = GfxStats::new(d3d_device.clone(), D3DCOLOR_XRGB!(0, 0, 0));
+
+        let light_vec_w = D3DXVECTOR3 { x: 0.0, y: 0.0, z: -1.0 };
+        let diffuse_light = D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
+        let ambient_light = D3DXCOLOR { r: 0.6, g: 0.6, b: 0.6, a: 1.0 };
+        let specular_light = D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
+
+        let crate_mtrl = Mtrl {
+            ambient: D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
+            diffuse: D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
+            spec: D3DXCOLOR { r: 0.4, g: 0.4, b: 0.4, a: 1.0 },
+            spec_power: 8.0
+        };
+
+        let teapot_mtrl = Mtrl {
+            ambient: D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
+            diffuse: D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 0.5 },
+            spec: D3DXCOLOR { r: 0.8, g: 0.8, b: 0.8, a: 1.0 },
+            spec_power: 16.0
+        };
+
+        // Set the crate back a bit.
+        let mut crate_world = unsafe { std::mem::zeroed() };
+        D3DXMatrixTranslation(&mut crate_world, 0.0, 0.0, 2.0);
+
+        let mut teapot_world = unsafe { std::mem::zeroed() };
+        D3DXMatrixIdentity(&mut teapot_world);
+
+        let mut crate_tex: *mut c_void = std::ptr::null_mut();
+        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_23_teapot_demo/crate.jpg\0".as_ptr() as _), &mut crate_tex));
+
+        let mut teapot_tex: *mut c_void = std::ptr::null_mut();
+        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_23_teapot_demo/brick1.bmp\0".as_ptr() as _), &mut teapot_tex));
+
+        let mut teapot: LPD3DXMESH = std::ptr::null_mut();
+        HR!(D3DXCreateTeapot(d3d_device.clone(), &mut teapot, std::ptr::null_mut()));
+
+        // Generate texture coordinates for the teapot.
+        TeapotDemo::gen_spherical_tex_coords(d3d_device.clone(), &mut teapot);
+
         if let Some(gfx_stats) = &mut gfx_stats {
             gfx_stats.add_vertices(24);
             gfx_stats.add_triangles(12);
+            gfx_stats.add_vertices(ID3DXBaseMesh_GetNumVertices(teapot));
+            gfx_stats.add_triangles(ID3DXBaseMesh_GetNumFaces(teapot));
         }
 
-        let (box_vb, box_ib) = CrateDemo::build_box_geometry(d3d_device.clone());
+        let (box_vb, box_ib) = TeapotDemo::build_box_geometry(d3d_device.clone());
 
-        let (fx, h_tech, h_wvp, h_world_inverse_transpose, h_light_vec_w,
-            h_diffuse_mtrl, h_diffuse_light, h_ambient_mtrl, h_ambient_light,
-            h_specular_mtrl, h_specular_light, h_specular_power,
-            h_eyepos, h_world, h_tex) =
-            CrateDemo::build_fx(d3d_device.clone());
+        let (fx, h_tech, h_wvp, h_world_inverse_transpose,
+            h_light_vec_w, h_diffuse_mtrl, h_diffuse_light,
+            h_ambient_mtrl, h_ambient_light, h_specular_mtrl,
+            h_specular_light, h_specular_power, h_eyepos,
+            h_world, h_tex) =
+            TeapotDemo::build_fx(d3d_device.clone());
 
-        let light_vec_w = D3DXVECTOR3 { x: 0.0, y: 0.0, z: -1.0 };
-        let diffuse_mtrl = D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
-        let diffuse_light = D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
-        let ambient_mtrl = D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
-        let ambient_light = D3DXCOLOR { r: 0.6, g: 0.6, b: 0.6, a: 1.0 };
-        let specular_mtrl = D3DXCOLOR { r: 0.8, g: 0.8, b: 0.8, a: 1.0 };
-        let specular_light = D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
-        let specular_power = 8.0;
-
-        let mut world: D3DXMATRIX = unsafe { std::mem::zeroed() };
-        D3DXMatrixIdentity(&mut world);
-
-        init_all_vertex_declarations(d3d_device.clone());
-
-        let mut crate_tex: *mut c_void = std::ptr::null_mut();
-        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_18_crate_demo/crate.jpg\0".as_ptr() as _), &mut crate_tex));
-
-        let mut crate_demo = CrateDemo {
+        let mut teapot_demo = TeapotDemo {
             d3d_pp,
             gfx_stats,
 
             box_vb,
             box_ib,
+            teapot,
             crate_tex,
+            teapot_tex,
 
             fx,
 
@@ -111,27 +152,28 @@ impl CrateDemo {
             h_world,
             h_tex,
 
+            crate_mtrl,
+            teapot_mtrl,
+
             light_vec_w,
-            ambient_mtrl,
             ambient_light,
-            diffuse_mtrl,
             diffuse_light,
-            specular_mtrl,
             specular_light,
-            specular_power,
 
             camera_radius: 6.0,
             camera_rotation_y: 1.2 * D3DX_PI,
             camera_height: 3.0,
 
-            world,
+            crate_world,
+            teapot_world,
+
             view: unsafe { std::mem::zeroed() },
             proj: unsafe { std::mem::zeroed() },
         };
 
-        crate_demo.on_reset_device();
+        teapot_demo.on_reset_device();
 
-        Some(crate_demo)
+        Some(teapot_demo)
     }
 
     pub fn release_com_objects(&self) {
@@ -141,6 +183,7 @@ impl CrateDemo {
 
         ReleaseCOM(self.fx);
         ReleaseCOM(self.crate_tex);
+        ReleaseCOM(self.teapot_tex);
 
         destroy_all_vertex_declarations();
     }
@@ -244,42 +287,13 @@ impl CrateDemo {
                 // Setup the rendering FX
                 HR!(ID3DXEffect_SetTechnique(self.fx, self.h_tech));
 
-                let mut r: D3DXMATRIX = std::mem::zeroed();
-                D3DXMatrixMultiply(&mut r, &self.world, &self.view);
-                D3DXMatrixMultiply(&mut r, &r, &self.proj);
-                HR!(ID3DXBaseEffect_SetMatrix(self.fx, self.h_wvp, &r));
-
-                let mut world_inverse_transpose: D3DXMATRIX = std::mem::zeroed();
-                D3DXMatrixInverse(&mut world_inverse_transpose, 0.0, &self.world);
-                D3DXMatrixTranspose(&mut world_inverse_transpose, &world_inverse_transpose);
-                HR!(ID3DXBaseEffect_SetMatrix(self.fx, self.h_world_inverse_transpose, &world_inverse_transpose));
-
                 HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_light_vec_w, &self.light_vec_w as *const _ as _, std::mem::size_of::<D3DXVECTOR3>() as u32));
-                HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_diffuse_mtrl, &self.diffuse_mtrl as *const _ as _, std::mem::size_of::<D3DXCOLOR>() as u32));
                 HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_diffuse_light, &self.diffuse_light as *const _ as _, std::mem::size_of::<D3DXCOLOR>() as u32));
-                HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_ambient_mtrl, &self.ambient_mtrl as *const _ as _, std::mem::size_of::<D3DXCOLOR>() as u32));
                 HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_ambient_light, &self.ambient_light as *const _ as _, std::mem::size_of::<D3DXCOLOR>() as u32));
-                HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_specular_mtrl, &self.specular_mtrl as *const _ as _, std::mem::size_of::<D3DXCOLOR>() as u32));
                 HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_specular_light, &self.specular_light as *const _ as _, std::mem::size_of::<D3DXCOLOR>() as u32));
-                HR!(ID3DXBaseEffect_SetFloat(self.fx, self.h_specular_power, self.specular_power));
-                HR!(ID3DXBaseEffect_SetMatrix(self.fx, self.h_world, &self.world));
-                HR!(ID3DXBaseEffect_SetTexture(self.fx, self.h_tex, self.crate_tex));
 
-                // Let Direct3D know the vertex buffer, index buffer and vertex
-                // declaration we are using.
-                HR!(d3d_device.SetVertexDeclaration(&VERTEX_PNT_DECL));
-                HR!(d3d_device.SetStreamSource(0, &self.box_vb, 0, std::mem::size_of::<VertexPNT>() as u32));
-                HR!(d3d_device.SetIndices(&self.box_ib));
-
-                // Begin passes.
-                let mut num_passes: u32 = 0;
-                HR!(ID3DXEffect_Begin(self.fx, &mut num_passes, 0));
-                for i in 0..num_passes {
-                    HR!(ID3DXEffect_BeginPass(self.fx, i));
-                    HR!(d3d_device.DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, 24, 0, 12));
-                    HR!(ID3DXEffect_EndPass(self.fx));
-                }
-                HR!(ID3DXEffect_End(self.fx));
+                self.draw_crate();
+                self.draw_teapot();
 
                 if let Some(gfx_stats) = &self.gfx_stats {
                     gfx_stats.display();
@@ -427,7 +441,7 @@ impl CrateDemo {
         let mut fx: LPD3DXEFFECT = std::ptr::null_mut();
         let mut errors: LPD3DXBUFFER = std::ptr::null_mut();
 
-        HR!(D3DXCreateEffectFromFile(d3d_device, PSTR(b"luna_18_crate_demo/dirLightTex.fx\0".as_ptr() as _),
+        HR!(D3DXCreateEffectFromFile(d3d_device, PSTR(b"luna_23_teapot_demo/dirLightTex.fx\0".as_ptr() as _),
         std::ptr::null(), std::ptr::null(), D3DXSHADER_DEBUG,
         std::ptr::null(), &mut fx, &mut errors));
 
@@ -458,9 +472,147 @@ impl CrateDemo {
         let h_world = ID3DXBaseEffect_GetParameterByName(fx, std::ptr::null(), PSTR(b"gWorld\0".as_ptr() as _));
         let h_tex = ID3DXBaseEffect_GetParameterByName(fx, std::ptr::null(), PSTR(b"gTex\0".as_ptr() as _));
 
-        (fx, h_tech, h_wvp, h_world_inverse_transpose, h_light_vec_w,
-         h_diffuse_mtrl, h_diffuse_light, h_ambient_mtrl, h_ambient_light,
-         h_specular_mtrl, h_specular_light, h_specular_power,
-         h_eyepos, h_world, h_tex)
+        (fx, h_tech, h_wvp, h_world_inverse_transpose,
+         h_light_vec_w, h_diffuse_mtrl, h_diffuse_light,
+         h_ambient_mtrl, h_ambient_light, h_specular_mtrl,
+         h_specular_light, h_specular_power, h_eyepos,
+         h_world, h_tex)
+    }
+
+    fn draw_crate(&self) {
+        unsafe {
+            if let Some(d3d_device) = &D3D_DEVICE {
+                HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_ambient_mtrl, &self.crate_mtrl.ambient as *const _ as _, std::mem::size_of::<D3DXCOLOR>() as u32));
+                HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_diffuse_mtrl, &self.crate_mtrl.diffuse as *const _ as _, std::mem::size_of::<D3DXCOLOR>() as u32));
+                HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_specular_mtrl, &self.crate_mtrl.spec as *const _ as _, std::mem::size_of::<D3DXCOLOR>() as u32));
+                HR!(ID3DXBaseEffect_SetFloat(self.fx, self.h_specular_power, self.crate_mtrl.spec_power));
+
+                let mut res: D3DXMATRIX = std::mem::zeroed();
+                D3DXMatrixMultiply(&mut res, &self.crate_world, &self.view);
+                D3DXMatrixMultiply(&mut res, &res, &self.proj);
+                HR!(ID3DXBaseEffect_SetMatrix(self.fx, self.h_wvp, &res));
+
+                let mut world_inverse_transpose: D3DXMATRIX = std::mem::zeroed();
+                D3DXMatrixInverse(&mut world_inverse_transpose, 0.0, &self.crate_world);
+                D3DXMatrixTranspose(&mut world_inverse_transpose, &world_inverse_transpose);
+                HR!(ID3DXBaseEffect_SetMatrix(self.fx, self.h_world_inverse_transpose, &world_inverse_transpose));
+                HR!(ID3DXBaseEffect_SetMatrix(self.fx, self.h_world, &self.crate_world));
+                HR!(ID3DXBaseEffect_SetTexture(self.fx, self.h_tex, self.crate_tex));
+
+                HR!(d3d_device.SetVertexDeclaration(&VERTEX_PNT_DECL));
+                HR!(d3d_device.SetStreamSource(0, &self.box_vb, 0, std::mem::size_of::<VertexPNT>() as u32));
+                HR!(d3d_device.SetIndices(&self.box_ib));
+
+                // Begin passes.
+                let mut num_passes: u32 = 0;
+                HR!(ID3DXEffect_Begin(self.fx, &mut num_passes, 0));
+                for i in 0..num_passes {
+                    HR!(ID3DXEffect_BeginPass(self.fx, i));
+                    HR!(d3d_device.DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, 24, 0, 12));
+                    HR!(ID3DXEffect_EndPass(self.fx));
+                }
+                HR!(ID3DXEffect_End(self.fx));
+            }
+        }
+    }
+
+    fn draw_teapot(&self) {
+        unsafe {
+            if let Some(d3d_device) = &D3D_DEVICE {
+                // Cylindrically interpolate texture coordinates.
+                HR!(d3d_device.SetRenderState(D3DRS_WRAP0, D3DWRAPCOORD_0 as u32));
+
+                // Enable alpha blending.
+                HR!(d3d_device.SetRenderState(D3DRS_ALPHABLENDENABLE, 1));
+                HR!(d3d_device.SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA.0 as u32));
+                HR!(d3d_device.SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA.0 as u32));
+
+                HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_ambient_mtrl, &self.teapot_mtrl.ambient as *const _ as _, std::mem::size_of::<D3DXCOLOR>() as u32));
+                HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_diffuse_mtrl, &self.teapot_mtrl.diffuse as *const _ as _, std::mem::size_of::<D3DXCOLOR>() as u32));
+                HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_specular_mtrl, &self.teapot_mtrl.spec as *const _ as _, std::mem::size_of::<D3DXCOLOR>() as u32));
+                HR!(ID3DXBaseEffect_SetFloat(self.fx, self.h_specular_power, self.teapot_mtrl.spec_power));
+
+                let mut res: D3DXMATRIX = std::mem::zeroed();
+                D3DXMatrixMultiply(&mut res, &self.teapot_world, &self.view);
+                D3DXMatrixMultiply(&mut res, &res, &self.proj);
+                HR!(ID3DXBaseEffect_SetMatrix(self.fx, self.h_wvp, &res));
+
+                let mut world_inverse_transpose: D3DXMATRIX = std::mem::zeroed();
+                D3DXMatrixInverse(&mut world_inverse_transpose, 0.0, &self.teapot_world);
+                D3DXMatrixTranspose(&mut world_inverse_transpose, &world_inverse_transpose);
+                HR!(ID3DXBaseEffect_SetMatrix(self.fx, self.h_world_inverse_transpose, &world_inverse_transpose));
+                HR!(ID3DXBaseEffect_SetMatrix(self.fx, self.h_world, &self.teapot_world));
+                HR!(ID3DXBaseEffect_SetTexture(self.fx, self.h_tex, self.teapot_tex));
+
+                // Begin passes.
+                let mut num_passes: u32 = 0;
+                HR!(ID3DXEffect_Begin(self.fx, &mut num_passes, 0));
+                for i in 0..num_passes {
+                    HR!(ID3DXEffect_BeginPass(self.fx, i));
+                    HR!(ID3DXBaseMesh_DrawSubset(self.teapot, 0));
+                    HR!(ID3DXEffect_EndPass(self.fx));
+                }
+                HR!(ID3DXEffect_End(self.fx));
+
+                // Disable wrap.
+                HR!(d3d_device.SetRenderState(D3DRS_WRAP0, 0));
+
+                // Disable alpha blending.
+                HR!(d3d_device.SetRenderState(D3DRS_ALPHABLENDENABLE, 0));
+            }
+        }
+    }
+
+    fn gen_spherical_tex_coords(d3d_device: IDirect3DDevice9, sphere: &mut LPD3DXMESH) {
+        // D3DXCreate* functions generate vertices with position
+        // and normal data.  But for texturing, we also need
+        // tex-coords.  So clone the mesh to change the vertex
+        // format to a format with tex-coords.
+        let mut elements: [D3DVERTEXELEMENT9; 64] = [D3DVERTEXELEMENT9::default(); 64];
+        let mut num_elements: u32 = 0;
+        unsafe {
+            if let Some(decl) = &VERTEX_PNT_DECL {
+                HR!(decl.GetDeclaration(elements.as_mut_ptr(), &mut num_elements));
+            }
+
+            let mut temp: LPD3DXMESH = std::ptr::null_mut();
+            HR!(ID3DXBaseMesh_CloneMesh(*sphere, D3DXMESH_SYSTEMMEM, elements.as_mut_ptr(),
+                d3d_device.clone(), &mut temp));
+
+            ReleaseCOM(*sphere);
+
+            // Now generate texture coordinates for each vertex.
+            let mut verts: *mut c_void = std::ptr::null_mut();
+            HR!(ID3DXBaseMesh_LockVertexBuffer(temp, 0, &mut verts));
+
+            let num_vertices: usize = ID3DXBaseMesh_GetNumVertices(temp) as usize;
+            let vertices: &mut [VertexPNT] = from_raw_parts_mut(verts as *mut VertexPNT, num_vertices);
+
+            for i in 0..num_vertices {
+                // Convert to spherical coordinates.
+                let p: D3DXVECTOR3 = vertices[i].pos;
+
+                let theta: f32 = p.z.atan2(p.x);
+                let phi: f32 = (p.y / (p.x * p.x + p.y * p.y + p.z * p.z).sqrt()).acos();
+
+                // Phi and theta give the texture coordinates, but are not in
+                // the range [0, 1], so scale them into that range.
+
+                let u: f32 = theta / (2.0 * D3DX_PI);
+                let v: f32 = phi / D3DX_PI;
+
+                // Save texture coordinates.
+                vertices[i].tex0.x = u;
+                vertices[i].tex0.y = v;
+            }
+
+            HR!(ID3DXBaseMesh_UnlockVertexBuffer(temp));
+
+            // Clone back to a hardware mesh.
+            HR!(ID3DXBaseMesh_CloneMesh(temp, D3DXMESH_MANAGED | D3DXMESH_WRITEONLY, elements.as_mut_ptr(),
+                d3d_device.clone(), sphere));
+
+            ReleaseCOM(temp);
+        }
     }
 }
