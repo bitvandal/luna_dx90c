@@ -43,7 +43,7 @@ pub struct D3DXVECTOR2 {
     pub y: f32,
 }
 
-pub const D3DX_PI: f32 = 3.141592654;
+pub const D3DX_PI: f32 = 3.14159265358979323846;
 
 #[repr(C)]
 pub struct D3DXCOLOR {
@@ -89,6 +89,11 @@ pub const D3DXSHADER_USE_LEGACY_D3DX9_31_DLL: u32 = 1 << 16;
 
 // D3DX Mesh
 pub type LPD3DXMESH = *mut c_void;
+
+// enum D3DXMESH
+pub const D3DXMESH_SYSTEMMEM: u32 = 0x110;
+pub const D3DXMESH_MANAGED: u32 = 0x220;
+pub const D3DXMESH_WRITEONLY: u32 = 0x440;
 
 // D3DX Functions
 
@@ -227,6 +232,17 @@ extern {
     // HRESULT ID3DXBaseMesh::DrawSubset(LPD3DXMESH self, DWORD AttribId)
     fn D3DX_ID3DXBaseMesh_DrawSubset(pMesh: *const c_void, AttribId: u32) -> D3DX_HRESULT;
 
+    // HRESULT CloneMesh(DWORD Options, const D3DVERTEXELEMENT9 *pDeclaration, LPDIRECT3DDEVICE9 pDevice,
+    //                   LPD3DXMESH *ppCloneMesh)
+    fn D3DX_ID3DXBaseMesh_CloneMesh(pMesh: *const c_void, Options: u32, pDeclaration: *const D3DVERTEXELEMENT9,
+                                    pDevice: IDirect3DDevice9, ppCloneMesh: *mut LPD3DXMESH) -> D3DX_HRESULT;
+
+    // HRESULT LockVertexBuffer(DWORD Flags, LPVOID *ppData)
+    fn D3DX_ID3DXBaseMesh_LockVertexBuffer(pMesh: *const c_void, Flags: u32, ppData: &mut *mut c_void) -> D3DX_HRESULT;
+
+    // HRESULT UnlockVertexBuffer()
+    fn D3DX_ID3DXBaseMesh_UnlockVertexBuffer(pMesh: *const c_void) -> D3DX_HRESULT;
+
     // MATH
 
     // D3DXVECTOR3* D3DXVec3Scale(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV, FLOAT s)
@@ -274,6 +290,12 @@ extern {
 
     // D3DXVECTOR3* D3DXVec3Normalize(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV)
     fn D3DX_Vec3Normalize(pOut: *mut D3DXVECTOR3, pV: *const D3DXVECTOR3) -> *mut D3DXVECTOR3;
+
+    // D3DXVECTOR3* D3DXVec3Maximize(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV1, const D3DXVECTOR3 *pV2)
+    fn D3DX_Vec3Maximize(pOut: *mut D3DXVECTOR3, pV1: *const D3DXVECTOR3, pV2: *const D3DXVECTOR3) -> *mut D3DXVECTOR3;
+
+    // D3DXVECTOR3* D3DXVec3Maximize(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV1, const D3DXVECTOR3 *pV2)
+    fn D3DX_Vec3Minimize(pOut: *mut D3DXVECTOR3, pV1: *const D3DXVECTOR3, pV2: *const D3DXVECTOR3) -> *mut D3DXVECTOR3;
 }
 
 fn to_result(code: D3DX_HRESULT) -> Result<()> {
@@ -499,6 +521,22 @@ pub fn D3DXVec3Add(pOut: *mut D3DXVECTOR3, pV1: *const D3DXVECTOR3, pV2: *const 
 }
 
 #[allow(non_snake_case)]
+pub fn ID3DXBaseMesh_CloneMesh(pMesh: *const c_void, Options: u32, pDeclaration: *const D3DVERTEXELEMENT9,
+                               pDevice: IDirect3DDevice9, ppCloneMesh: *mut LPD3DXMESH) -> Result<()> {
+    unsafe { to_result(D3DX_ID3DXBaseMesh_CloneMesh(pMesh, Options, pDeclaration, pDevice, ppCloneMesh)) }
+}
+
+#[allow(non_snake_case)]
+pub fn ID3DXBaseMesh_LockVertexBuffer(pMesh: *const c_void, Flags: u32, ppData: &mut *mut c_void) -> Result<()> {
+    unsafe { to_result(D3DX_ID3DXBaseMesh_LockVertexBuffer(pMesh, Flags, ppData)) }
+}
+
+#[allow(non_snake_case)]
+pub fn ID3DXBaseMesh_UnlockVertexBuffer(pMesh: *const c_void) -> Result<()> {
+    unsafe { to_result(D3DX_ID3DXBaseMesh_UnlockVertexBuffer(pMesh)) }
+}
+
+#[allow(non_snake_case)]
 pub fn D3DXVec3Subtract(pOut: *mut D3DXVECTOR3, pV1: *const D3DXVECTOR3, pV2: *const D3DXVECTOR3) -> *mut D3DXVECTOR3 {
     unsafe { D3DX_Vec3Subtract(pOut, pV1, pV2) }
 }
@@ -569,4 +607,14 @@ pub fn D3DXVec3TransformCoord(pOut: *mut D3DXVECTOR3 , pV: *const D3DXVECTOR3,
 #[allow(non_snake_case)]
 pub fn D3DXVec3Normalize(pOut: *mut D3DXVECTOR3 , pV: *const D3DXVECTOR3) -> *mut D3DXVECTOR3 {
     unsafe { D3DX_Vec3Normalize(pOut, pV) }
+}
+
+#[allow(non_snake_case)]
+pub fn D3DXVec3Maximize(pOut: *mut D3DXVECTOR3, pV1: *const D3DXVECTOR3, pV2: *const D3DXVECTOR3) -> *mut D3DXVECTOR3 {
+    unsafe { D3DX_Vec3Maximize(pOut, pV1, pV2) }
+}
+
+#[allow(non_snake_case)]
+pub fn D3DXVec3Minimize(pOut: *mut D3DXVECTOR3, pV1: *const D3DXVECTOR3, pV2: *const D3DXVECTOR3) -> *mut D3DXVECTOR3 {
+    unsafe { D3DX_Vec3Minimize(pOut, pV1, pV2) }
 }

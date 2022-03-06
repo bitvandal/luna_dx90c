@@ -21,5 +21,6 @@ members = [
     "luna_17_spotlight_demo",
     "luna_18_crate_demo",
     "luna_19_tiled_ground_demo",
-    "luna_20_multi_tex_demo"
+    "luna_20_multi_tex_demo",
+    "luna_21_sphere_cyl_tex_demo"
 ]

@@ -172,6 +172,19 @@ extern "C" HRESULT D3DX_ID3DXBaseMesh_DrawSubset(LPD3DXMESH self, DWORD AttribId
     return self->DrawSubset(AttribId);
 }
 
+extern "C" HRESULT D3DX_ID3DXBaseMesh_CloneMesh(LPD3DXMESH self, DWORD Options,
+        const D3DVERTEXELEMENT9 *pDeclaration, LPDIRECT3DDEVICE9 pDevice, LPD3DXMESH *ppCloneMesh) {
+    return self->CloneMesh(Options, pDeclaration, pDevice, ppCloneMesh);
+}
+
+extern "C" HRESULT D3DX_ID3DXBaseMesh_LockVertexBuffer(LPD3DXMESH self, DWORD Flags, LPVOID *ppData) {
+    return self->LockVertexBuffer(Flags, ppData);
+}
+
+extern "C" HRESULT D3DX_ID3DXBaseMesh_UnlockVertexBuffer(LPD3DXMESH self) {
+    return self->UnlockVertexBuffer();
+}
+
 // MATH
 
 extern "C" D3DXVECTOR3* D3DX_Vec3Scale(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV, FLOAT s) {
@@ -232,4 +245,12 @@ extern "C" D3DXVECTOR3* D3DX_Vec3TransformCoord(D3DXVECTOR3 *pOut, const D3DXVEC
 
 extern "C" D3DXVECTOR3* D3DX_Vec3Normalize(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV) {
     return D3DXVec3Normalize(pOut, pV);
+}
+
+extern "C" D3DXVECTOR3* D3DX_Vec3Maximize(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV1, const D3DXVECTOR3 *pV2) {
+    return D3DXVec3Maximize(pOut, pV1, pV2);
+}
+
+extern "C" D3DXVECTOR3* D3DX_Vec3Minimize(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV1, const D3DXVECTOR3 *pV2) {
+    return D3DXVec3Minimize(pOut, pV1, pV2);
 }
