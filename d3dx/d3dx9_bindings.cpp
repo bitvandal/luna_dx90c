@@ -243,6 +243,10 @@ extern "C" D3DXMATRIX* D3DX_MatrixReflect(D3DXMATRIX *pOut, const D3DXPLANE *pPl
     return D3DXMatrixReflect(pOut, pPlane);
 }
 
+extern "C" D3DXMATRIX* D3DX_MatrixShadow(D3DXMATRIX *pOut, const D3DXVECTOR4 *pLight, const D3DXPLANE *pPlane) {
+    return D3DXMatrixShadow(pOut, pLight, pPlane);
+}
+
 extern "C" D3DXVECTOR3* D3DX_Vec3TransformCoord(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV, const D3DXMATRIX *pM) {
     return D3DXVec3TransformCoord(pOut, pV, pM);
 }

@@ -27,5 +27,6 @@ members = [
     "luna_23_teapot_demo",
     "luna_24_teapot_texalpha_demo",
     "luna_25_gate_demo",
-    "luna_26_stencil_mirror_demo"
+    "luna_26_stencil_mirror_demo",
+    "luna_27_stencil_shadow_demo"
 ]

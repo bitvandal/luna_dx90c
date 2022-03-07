@@ -49,6 +49,14 @@ impl D3DXVECTOR2 {
     }
 }
 
+#[repr(C)]
+pub struct D3DXVECTOR4 {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub w: f32,
+}
+
 pub const D3DX_PI: f32 = 3.14159265358979323846;
 
 #[repr(C)]
@@ -303,6 +311,9 @@ extern {
 
     // D3DXMATRIX* D3DXMatrixReflect(D3DXMATRIX *pOut, const D3DXPLANE *pPlane);
     fn D3DX_MatrixReflect(pOut: *mut D3DXMATRIX, pPlane: *const D3DXPLANE) -> *mut D3DXMATRIX;
+
+    // D3DXMATRIX* D3DXMatrixShadow(D3DXMATRIX *pOut, const D3DXVECTOR4 *pLight, const D3DXPLANE *pPlane);
+    fn D3DX_MatrixShadow(pOut: *mut D3DXMATRIX, pLight: *const D3DXVECTOR4, pPlane: *const D3DXPLANE) -> *mut D3DXMATRIX;
 
     // D3DXVECTOR3* D3DXVec3TransformCoord(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV, const D3DXMATRIX *pM)
     fn D3DX_Vec3TransformCoord(pOut: *mut D3DXVECTOR3, pV: *const D3DXVECTOR3, pM: *const D3DXMATRIX) -> *mut D3DXVECTOR3;
@@ -623,6 +634,11 @@ pub fn D3DXMatrixTranspose(pOut: *mut D3DXMATRIX, pM: *const D3DXMATRIX) -> *mut
 #[allow(non_snake_case)]
 pub fn D3DXMatrixReflect(pOut: *mut D3DXMATRIX, pPlane: *const D3DXPLANE) -> *mut D3DXMATRIX {
     unsafe { D3DX_MatrixReflect(pOut, pPlane) }
+}
+
+#[allow(non_snake_case)]
+pub fn D3DXMatrixShadow(pOut: *mut D3DXMATRIX, pLight: *const D3DXVECTOR4, pPlane: *const D3DXPLANE) -> *mut D3DXMATRIX {
+    unsafe { D3DX_MatrixShadow(pOut, pLight, pPlane) }
 }
 
 #[allow(non_snake_case)]
