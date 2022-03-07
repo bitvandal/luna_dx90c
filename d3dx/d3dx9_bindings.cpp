@@ -239,8 +239,16 @@ extern "C" D3DXMATRIX* D3DX_MatrixTranspose(D3DXMATRIX *pOut, const D3DXMATRIX *
     return D3DXMatrixTranspose(pOut, pM);
 }
 
+extern "C" D3DXMATRIX* D3DX_MatrixReflect(D3DXMATRIX *pOut, const D3DXPLANE *pPlane) {
+    return D3DXMatrixReflect(pOut, pPlane);
+}
+
 extern "C" D3DXVECTOR3* D3DX_Vec3TransformCoord(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV, const D3DXMATRIX *pM) {
     return D3DXVec3TransformCoord(pOut, pV, pM);
+}
+
+extern "C" D3DXVECTOR3* D3DX_Vec3TransformNormal(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV, const D3DXMATRIX *pM) {
+    return D3DXVec3TransformNormal(pOut, pV, pM);
 }
 
 extern "C" D3DXVECTOR3* D3DX_Vec3Normalize(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV) {

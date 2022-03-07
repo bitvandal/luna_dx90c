@@ -65,6 +65,16 @@ impl D3DXCOLOR {
     }
 }
 
+// Planes
+
+#[repr(C)]
+pub struct D3DXPLANE {
+    pub a: f32,
+    pub b: f32,
+    pub c: f32,
+    pub d: f32,
+}
+
 // Misc
 
 #[allow(non_camel_case_types)]
@@ -291,8 +301,14 @@ extern {
     // D3DXMATRIX* D3DXMatrixTranspose(D3DXMATRIX *pOut, const D3DXMATRIX *pM);
     fn D3DX_MatrixTranspose(pOut: *mut D3DXMATRIX, pM: *const D3DXMATRIX) -> *mut D3DXMATRIX;
 
+    // D3DXMATRIX* D3DXMatrixReflect(D3DXMATRIX *pOut, const D3DXPLANE *pPlane);
+    fn D3DX_MatrixReflect(pOut: *mut D3DXMATRIX, pPlane: *const D3DXPLANE) -> *mut D3DXMATRIX;
+
     // D3DXVECTOR3* D3DXVec3TransformCoord(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV, const D3DXMATRIX *pM)
     fn D3DX_Vec3TransformCoord(pOut: *mut D3DXVECTOR3, pV: *const D3DXVECTOR3, pM: *const D3DXMATRIX) -> *mut D3DXVECTOR3;
+
+    // D3DXVECTOR3* D3DXVec3TransformNormal(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV, const D3DXMATRIX *pM)
+    fn D3DX_Vec3TransformNormal(pOut: *mut D3DXVECTOR3, pV: *const D3DXVECTOR3, pM: *const D3DXMATRIX) -> *mut D3DXVECTOR3;
 
     // D3DXVECTOR3* D3DXVec3Normalize(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV)
     fn D3DX_Vec3Normalize(pOut: *mut D3DXVECTOR3, pV: *const D3DXVECTOR3) -> *mut D3DXVECTOR3;
@@ -605,9 +621,20 @@ pub fn D3DXMatrixTranspose(pOut: *mut D3DXMATRIX, pM: *const D3DXMATRIX) -> *mut
 }
 
 #[allow(non_snake_case)]
-pub fn D3DXVec3TransformCoord(pOut: *mut D3DXVECTOR3 , pV: *const D3DXVECTOR3,
+pub fn D3DXMatrixReflect(pOut: *mut D3DXMATRIX, pPlane: *const D3DXPLANE) -> *mut D3DXMATRIX {
+    unsafe { D3DX_MatrixReflect(pOut, pPlane) }
+}
+
+#[allow(non_snake_case)]
+pub fn D3DXVec3TransformCoord(pOut: *mut D3DXVECTOR3, pV: *const D3DXVECTOR3,
                               pM: *const D3DXMATRIX) -> *mut D3DXVECTOR3 {
     unsafe { D3DX_Vec3TransformCoord(pOut, pV, pM) }
+}
+
+#[allow(non_snake_case)]
+pub fn D3DXVec3TransformNormal(pOut: *mut D3DXVECTOR3, pV: *const D3DXVECTOR3,
+                              pM: *const D3DXMATRIX) -> *mut D3DXVECTOR3 {
+    unsafe { D3DX_Vec3TransformNormal(pOut, pV, pM) }
 }
 
 #[allow(non_snake_case)]
