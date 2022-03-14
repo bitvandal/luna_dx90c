@@ -24,8 +24,42 @@ struct DirLight {
     dir_w: D3DXVECTOR3,
 }
 
+// Bounding Volumes
+#[repr(C)]
+struct AABB  {
+    min_pt: D3DXVECTOR3,
+    max_pt: D3DXVECTOR3,
+}
+
+impl Default for AABB {
+    fn default() -> Self {
+        AABB {
+            min_pt: D3DXVECTOR3 {
+                x: f32::MAX,
+                y: f32::MAX,
+                z: f32::MAX
+            },
+            max_pt: D3DXVECTOR3 {
+                x: f32::MIN,
+                y: f32::MIN,
+                z: f32::MIN
+            }
+        }
+    }
+}
+
+impl AABB {
+    pub fn center(&self) -> D3DXVECTOR3 {
+        D3DXVECTOR3 {
+            x: 0.5 * (self.min_pt.x + self.max_pt.x),
+            y: 0.5 * (self.min_pt.y + self.max_pt.y),
+            z: 0.5 * (self.min_pt.z + self.max_pt.z)
+        }
+    }
+}
+
 // Sample demo
-pub struct XFileDemo {
+pub struct BoundingBoxDemo {
     d3d_pp: *const D3DPRESENT_PARAMETERS,
     gfx_stats: Option<GfxStats>,
 
@@ -34,6 +68,11 @@ pub struct XFileDemo {
     tex: Vec<*mut c_void>,
 
     white_tex: *mut c_void,  //IDirect3DTexture9,
+
+    box_mesh: LPD3DXMESH,
+    box_mtrl: Mtrl,
+    _bounding_box: AABB,
+    bounding_box_offset: D3DXMATRIX,
 
     fx: LPD3DXEFFECT,
 
@@ -57,9 +96,9 @@ pub struct XFileDemo {
     proj: D3DXMATRIX,
 }
 
-impl XFileDemo {
-    pub fn new(d3d_device: IDirect3DDevice9, d3d_pp: *const D3DPRESENT_PARAMETERS) -> Option<XFileDemo> {
-        if !XFileDemo::check_device_caps() {
+impl BoundingBoxDemo {
+    pub fn new(d3d_device: IDirect3DDevice9, d3d_pp: *const D3DPRESENT_PARAMETERS) -> Option<BoundingBoxDemo> {
+        if !BoundingBoxDemo::check_device_caps() {
             display_error_then_quit("checkDeviceCaps() Failed");
         }
 
@@ -67,7 +106,7 @@ impl XFileDemo {
 
         let mut gfx_stats = GfxStats::new(d3d_device.clone(), D3DCOLOR_XRGB!(0, 0, 0));
 
-        let mut light_dir_w = D3DXVECTOR3 { x: 0.0, y: 1.0, z: 2.0 };
+        let mut light_dir_w = D3DXVECTOR3 { x: 1.0, y: -1.0, z: -2.0 };
         D3DXVec3Normalize(&mut light_dir_w, &light_dir_w);
 
         let light = DirLight {
@@ -78,20 +117,64 @@ impl XFileDemo {
         };
 
         let (mesh, mtrl, tex) =
-            // XFileDemo::load_x_file("bigship1.x", d3d_device.clone());
-            // XFileDemo::load_x_file("car.x", d3d_device.clone());
-            // XFileDemo::load_x_file("Dwarf.x", d3d_device.clone());
-            XFileDemo::load_x_file("skullocc.x", d3d_device.clone());
+            BoundingBoxDemo::load_x_file("bigship1.x", d3d_device.clone());
+            // BoundingBoxDemo::load_x_file("car.x", d3d_device.clone());
+            // BoundingBoxDemo::load_x_file("skullocc.x", d3d_device.clone());
+            // BoundingBoxDemo::load_x_file("tiger.x", d3d_device.clone());
 
         let mut world = unsafe { std::mem::zeroed() };
         D3DXMatrixIdentity(&mut world);
 
+        // Compute the bounding box.
+        let mut v: *mut c_void = std::ptr::null_mut();
+        HR!(ID3DXBaseMesh_LockVertexBuffer(mesh, 0, &mut v));
+
+        let num_vertices: usize = ID3DXBaseMesh_GetNumVertices(mesh) as usize;
+        let mut bounding_box: AABB = Default::default();
+
+        HR!(D3DXComputeBoundingBox(v.cast(), num_vertices as u32, std::mem::size_of::<VertexPNT>() as u32,
+            &mut bounding_box.min_pt, &mut bounding_box.max_pt));
+
+        HR!(ID3DXBaseMesh_UnlockVertexBuffer(mesh));
+
+        let width: f32  = bounding_box.max_pt.x - bounding_box.min_pt.x;
+        let height: f32 = bounding_box.max_pt.y - bounding_box.min_pt.y;
+        let depth: f32  = bounding_box.max_pt.z - bounding_box.min_pt.z;
+
+        // Build a box mesh so that we can render the bounding box visually.
+        let mut box_mesh: LPD3DXMESH = std::ptr::null_mut();
+        HR!(D3DXCreateBox(d3d_device.clone(), width, height, depth, &mut box_mesh, std::ptr::null_mut()));
+
+        // It is possible that the mesh was not centered about the origin
+        // when it was modeled.  But the bounding box mesh is built around the
+        // origin.  So offset the bounding box (mesh) center so that it
+        // matches the true mathematical bounding box center.
+
+        let center = bounding_box.center();
+        let mut bounding_box_offset: D3DXMATRIX = unsafe { std::mem::zeroed() };
+
+        D3DXMatrixTranslation(&mut bounding_box_offset, center.x, center.y, center.z);
+
+        // Define the box material--make semi-transparent.
+        let box_mtrl = Mtrl {
+            ambient: D3DXCOLOR { r: 0.0, g: 0.0, b: 1.0, a: 1.0 },
+            diffuse: D3DXCOLOR { r: 0.0, g: 0.0, b: 1.0, a: 0.5 },
+            spec:    D3DXCOLOR { r: 0.5, g: 0.5, b: 0.5, a: 1.0 },
+            spec_power: 8.0
+        };
+
+        // Create the white dummy texture.
         let mut white_tex = unsafe { std::mem::zeroed() };
-        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_28_x_file_demo/whitetex.dds\0".as_ptr() as _), &mut white_tex));
+        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_29_bounding_box_demo/whitetex.dds\0".as_ptr() as _), &mut white_tex));
 
         if let Some(gfx_stats) = &mut gfx_stats {
+            // Add main mesh geometry count.
             gfx_stats.add_vertices(ID3DXBaseMesh_GetNumVertices(mesh));
             gfx_stats.add_triangles(ID3DXBaseMesh_GetNumFaces(mesh));
+
+            // Add bounding box geometry count.
+            gfx_stats.add_vertices(ID3DXBaseMesh_GetNumVertices(box_mesh));
+            gfx_stats.add_triangles(ID3DXBaseMesh_GetNumFaces(box_mesh));
         }
 
         let (fx,
@@ -103,9 +186,9 @@ impl XFileDemo {
             h_eye_pos,
             h_world,
             h_tex) =
-            XFileDemo::build_fx(d3d_device.clone());
+            BoundingBoxDemo::build_fx(d3d_device.clone());
 
-        let mut x_file_demo = XFileDemo {
+        let mut bounding_box_demo = BoundingBoxDemo {
             d3d_pp,
             gfx_stats,
 
@@ -115,6 +198,11 @@ impl XFileDemo {
             tex,
 
             white_tex,
+
+            box_mesh,
+            box_mtrl,
+            _bounding_box: bounding_box,
+            bounding_box_offset,
 
             fx,
 
@@ -129,9 +217,9 @@ impl XFileDemo {
 
             light,
 
-            camera_radius: 12.0,
+            camera_radius: 30.0,
             camera_rotation_y: 1.2 * D3DX_PI,
-            camera_height: 6.0,
+            camera_height: 10.0,
 
             world,
 
@@ -139,9 +227,9 @@ impl XFileDemo {
             proj: unsafe { std::mem::zeroed() },
         };
 
-        x_file_demo.on_reset_device();
+        bounding_box_demo.on_reset_device();
 
-        Some(x_file_demo)
+        Some(bounding_box_demo)
     }
 
     pub fn release_com_objects(&self) {
@@ -151,6 +239,7 @@ impl XFileDemo {
 
         ReleaseCOM(self.fx);
         ReleaseCOM(self.mesh);
+        ReleaseCOM(self.box_mesh);
 
         destroy_all_vertex_declarations();
     }
@@ -225,8 +314,8 @@ impl XFileDemo {
                 }
 
                 // Don't let radius get too small.
-                if self.camera_radius < 2.0 {
-                    self.camera_radius = 2.0;
+                if self.camera_radius < 3.0 {
+                    self.camera_radius = 3.0;
                 }
 
                 // The camera position/orientation relative to world space can
@@ -273,6 +362,7 @@ impl XFileDemo {
 
                 HR!(ID3DXEffect_BeginPass(self.fx, 0));
 
+                // Draw the mesh.
                 for j in 0..self.mtrl.len() {
                     HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_mtrl, &self.mtrl[j] as *const _ as _, std::mem::size_of::<Mtrl>() as u32));
 
@@ -290,6 +380,30 @@ impl XFileDemo {
                     HR!(ID3DXEffect_CommitChanges(self.fx));
                     HR!(ID3DXBaseMesh_DrawSubset(self.mesh, j as u32));
                 }
+
+                // Draw the bounding box with alpha blending.
+                HR!(d3d_device.SetRenderState(D3DRS_ALPHABLENDENABLE, 1));
+                HR!(d3d_device.SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA.0));
+                HR!(d3d_device.SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA.0));
+
+                res = std::mem::zeroed();
+                D3DXMatrixMultiply(&mut res, &self.bounding_box_offset, &self.view);
+                D3DXMatrixMultiply(&mut res, &res, &self.proj);
+                HR!(ID3DXBaseEffect_SetMatrix(self.fx, self.h_wvp, &res));
+
+                world_inverse_transpose = std::mem::zeroed();
+                D3DXMatrixInverse(&mut world_inverse_transpose, 0.0, &self.bounding_box_offset);
+                D3DXMatrixTranspose(&mut world_inverse_transpose, &world_inverse_transpose);
+                HR!(ID3DXBaseEffect_SetMatrix(self.fx, self.h_world_inverse_transpose, &world_inverse_transpose));
+                HR!(ID3DXBaseEffect_SetMatrix(self.fx, self.h_world, &self.bounding_box_offset));
+
+                HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_mtrl, &self.box_mtrl as *const _ as _, std::mem::size_of::<Mtrl>() as u32));
+                HR!(ID3DXBaseEffect_SetTexture(self.fx, self.h_tex, self.white_tex));
+
+                HR!(ID3DXEffect_CommitChanges(self.fx));
+                HR!(ID3DXBaseMesh_DrawSubset(self.box_mesh, 0));
+
+                HR!(d3d_device.SetRenderState(D3DRS_ALPHABLENDENABLE, 0));
 
                 HR!(ID3DXEffect_EndPass(self.fx));
                 HR!(ID3DXEffect_End(self.fx));
@@ -313,7 +427,7 @@ impl XFileDemo {
         let x: f32 = self.camera_radius * self.camera_rotation_y.cos();
         let z: f32 = self.camera_radius * self.camera_rotation_y.sin();
         let pos = D3DXVECTOR3 { x, y: self.camera_height, z };
-        let target = D3DXVECTOR3 { x: 0.0, y: 2.0, z: 0.0 };
+        let target = D3DXVECTOR3 { x: 0.0, y: 0.0, z: 0.0 };
         let up = D3DXVECTOR3 { x: 0.0, y: 1.0, z: 0.0 };
         D3DXMatrixLookAtLH(&mut self.view, &pos, &target, &up);
 
@@ -333,7 +447,7 @@ impl XFileDemo {
         let mut fx: LPD3DXEFFECT = std::ptr::null_mut();
         let mut errors: LPD3DXBUFFER = std::ptr::null_mut();
 
-        HR!(D3DXCreateEffectFromFile(d3d_device, PSTR(b"luna_28_x_file_demo/PhongDirLtTex.fx\0".as_ptr() as _),
+        HR!(D3DXCreateEffectFromFile(d3d_device, PSTR(b"luna_29_bounding_box_demo/PhongDirLtTex.fx\0".as_ptr() as _),
             std::ptr::null(), std::ptr::null(), D3DXSHADER_DEBUG,
             std::ptr::null(), &mut fx, &mut errors));
 
@@ -484,7 +598,7 @@ impl XFileDemo {
 }
 
 fn build_file_path(filename: &str) -> String {
-    let mut filepath = String::from("luna_28_x_file_demo/");
+    let mut filepath = String::from("luna_29_bounding_box_demo/");
     filepath.push_str(filename);
     filepath.push_str("\0");
     filepath

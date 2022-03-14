@@ -273,6 +273,11 @@ extern {
     fn D3DX_CreateTeapot(pDevice: IDirect3DDevice9, ppMesh: *mut LPD3DXMESH,
                          ppAdjacency: *mut LPD3DXBUFFER) -> D3DX_HRESULT;
 
+    // HRESULT D3DXCreateBox(LPDIRECT3DDEVICE9 pDevice, FLOAT Width, FLOAT Height, FLOAT Depth,
+    //                       LPD3DXMESH *ppMesh, LPD3DXBUFFER *ppAdjacency);
+    fn D3DX_CreateBox(pDevice: IDirect3DDevice9, Width: f32, Height: f32, Depth: f32,
+                     ppMesh: *mut LPD3DXMESH, ppAdjacency: *mut LPD3DXBUFFER) -> D3DX_HRESULT;
+
     // DWORD ID3DXBaseMesh::GetNumVertices();
     fn D3DX_ID3DXBaseMesh_GetNumVertices(pMesh: *const c_void) -> u32;
 
@@ -309,6 +314,11 @@ extern {
                           ppAdjacency: *mut LPD3DXBUFFER, ppMaterials: *mut LPD3DXBUFFER,
                           ppEffectInstances: *mut LPD3DXBUFFER, pNumMaterials: *mut u32,
                           ppMesh: *mut LPD3DXMESH) -> D3DX_HRESULT;
+
+    // HRESULT D3DXComputeBoundingBox(const D3DXVECTOR3 *pFirstPosition, DWORD NumVertices,
+    //                                DWORD dwStride, D3DXVECTOR3 *pMin, D3DXVECTOR3 *pMax);
+    fn D3DX_ComputeBoundingBox(pFirstPosition: *const D3DXVECTOR3, NumVertices: u32,
+                               dwStride: u32, pMin: *mut D3DXVECTOR3, pMax: *mut D3DXVECTOR3) -> D3DX_HRESULT;
 
     // HRESULT D3DXComputeNormals(LPD3DXBASEMESH pMesh, const DWORD *pAdjacency);
     fn D3DX_ComputeNormals(pMesh: LPD3DXMESH, pAdjacency: *const u32) -> D3DX_HRESULT;
@@ -580,6 +590,12 @@ pub fn D3DXCreateTeapot(pDevice: IDirect3DDevice9, ppMesh: *mut LPD3DXMESH,
 }
 
 #[allow(non_snake_case)]
+pub fn D3DXCreateBox(pDevice: IDirect3DDevice9, Width: f32, Height: f32, Depth: f32,
+                      ppMesh: *mut LPD3DXMESH, ppAdjacency: *mut LPD3DXBUFFER) -> Result<()> {
+    unsafe { to_result(D3DX_CreateBox(pDevice, Width, Height, Depth, ppMesh, ppAdjacency)) }
+}
+
+#[allow(non_snake_case)]
 pub fn ID3DXBaseMesh_GetNumVertices(pMesh: *const c_void) -> u32 {
     unsafe { D3DX_ID3DXBaseMesh_GetNumVertices(pMesh) }
 }
@@ -636,6 +652,12 @@ pub fn D3DXLoadMeshFromX(pFilename: PSTR, Options: u32, pDevice: IDirect3DDevice
     unsafe { to_result(D3DX_LoadMeshFromX(pFilename, Options, pDevice, ppAdjacency,
                                           ppMaterials, ppEffectInstances, pNumMaterials,
                                           ppMesh)) }
+}
+
+#[allow(non_snake_case)]
+pub fn D3DXComputeBoundingBox(pFirstPosition: *const D3DXVECTOR3, NumVertices: u32,
+                           dwStride: u32, pMin: *mut D3DXVECTOR3, pMax: *mut D3DXVECTOR3) -> Result<()> {
+    unsafe { to_result(D3DX_ComputeBoundingBox(pFirstPosition, NumVertices, dwStride, pMin, pMax)) }
 }
 
 #[allow(non_snake_case)]

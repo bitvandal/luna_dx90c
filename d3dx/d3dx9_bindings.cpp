@@ -160,6 +160,11 @@ extern "C" HRESULT D3DX_CreateTeapot(LPDIRECT3DDEVICE9 pDevice, LPD3DXMESH *ppMe
     return D3DXCreateTeapot(pDevice, ppMesh, ppAdjacency);
 }
 
+extern "C" HRESULT D3DX_CreateBox(LPDIRECT3DDEVICE9 pDevice, FLOAT Width, FLOAT Height, FLOAT Depth,
+                                  LPD3DXMESH *ppMesh, LPD3DXBUFFER *ppAdjacency) {
+    return D3DXCreateBox(pDevice, Width, Height, Depth, ppMesh, ppAdjacency);
+}
+
 extern "C" DWORD D3DX_ID3DXBaseMesh_GetNumVertices(LPD3DXMESH self) {
     return self->GetNumVertices();
 }
@@ -200,6 +205,11 @@ extern "C" HRESULT D3DX_LoadMeshFromX(LPCTSTR pFilename, DWORD Options, LPDIRECT
         DWORD *pNumMaterials, LPD3DXMESH *ppMesh) {
     return D3DXLoadMeshFromX(pFilename, Options, pD3DDevice, ppAdjacency, ppMaterials,
         ppEffectInstances, pNumMaterials, ppMesh);
+}
+
+extern "C" HRESULT D3DX_ComputeBoundingBox(const D3DXVECTOR3 *pFirstPosition, DWORD NumVertices,
+                                           DWORD dwStride, D3DXVECTOR3 *pMin, D3DXVECTOR3 *pMax) {
+    return D3DXComputeBoundingBox(pFirstPosition, NumVertices, dwStride, pMin, pMax);
 }
 
 extern "C" HRESULT D3DX_ComputeNormals(LPD3DXBASEMESH pMesh, const DWORD *pAdjacency) {
