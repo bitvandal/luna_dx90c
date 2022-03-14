@@ -185,6 +185,27 @@ extern "C" HRESULT D3DX_ID3DXBaseMesh_UnlockVertexBuffer(LPD3DXMESH self) {
     return self->UnlockVertexBuffer();
 }
 
+extern "C" HRESULT D3DX_ID3DXBaseMesh_GetDeclaration(LPD3DXMESH self, D3DVERTEXELEMENT9 *Declaration) {
+    return self->GetDeclaration(Declaration);
+}
+
+extern "C" HRESULT D3DX_ID3DXMesh_Optimize(LPD3DXMESH self, DWORD Flags, const DWORD *pAdjacencyIn,
+                                           DWORD *pAdjacencyOut, DWORD *pFaceRemap, LPD3DXBUFFER *ppVertexRemap,
+                                           LPD3DXMESH *ppOptMesh) {
+    return self->Optimize(Flags, pAdjacencyIn, pAdjacencyOut, pFaceRemap, ppVertexRemap, ppOptMesh);
+}
+
+extern "C" HRESULT D3DX_LoadMeshFromX(LPCTSTR pFilename, DWORD Options, LPDIRECT3DDEVICE9 pD3DDevice,
+        LPD3DXBUFFER *ppAdjacency, LPD3DXBUFFER *ppMaterials, LPD3DXBUFFER *ppEffectInstances,
+        DWORD *pNumMaterials, LPD3DXMESH *ppMesh) {
+    return D3DXLoadMeshFromX(pFilename, Options, pD3DDevice, ppAdjacency, ppMaterials,
+        ppEffectInstances, pNumMaterials, ppMesh);
+}
+
+extern "C" HRESULT D3DX_ComputeNormals(LPD3DXBASEMESH pMesh, const DWORD *pAdjacency) {
+    return D3DXComputeNormals(pMesh, pAdjacency);
+}
+
 // MATH
 
 extern "C" D3DXVECTOR3* D3DX_Vec3Scale(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV, FLOAT s) {

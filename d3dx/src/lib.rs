@@ -26,6 +26,14 @@ pub struct D3DXFONT_DESC {
     pub FaceName: PSTR
 }
 
+// D3DX Material
+#[allow(non_snake_case)]
+#[repr(C)]
+pub struct D3DXMATERIAL {
+    pub MatD3D: D3DMATERIAL9,
+    pub pTextureFilename: PSTR
+}
+
 // D3DX Core
 
 pub type LPD3DXBUFFER = *mut c_void;
@@ -70,6 +78,18 @@ pub struct D3DXCOLOR {
 impl D3DXCOLOR {
     pub fn mult(&self, k: f32) -> D3DXCOLOR {
         D3DXCOLOR { r: k * self.r, g: k * self.g, b: k * self.b, a: self.a }
+    }
+}
+
+// isomorphic types
+impl From<D3DCOLORVALUE> for D3DXCOLOR {
+    fn from(color: D3DCOLORVALUE) -> Self {
+        D3DXCOLOR {
+            r: color.r,
+            g: color.g,
+            b: color.b,
+            a: color.a
+        }
     }
 }
 
@@ -118,6 +138,12 @@ pub type LPD3DXMESH = *mut c_void;
 pub const D3DXMESH_SYSTEMMEM: u32 = 0x110;
 pub const D3DXMESH_MANAGED: u32 = 0x220;
 pub const D3DXMESH_WRITEONLY: u32 = 0x440;
+
+// enum D3DXMESHOPT
+pub const D3DXMESHOPT_COMPACT: u32 = 0x01000000;
+pub const D3DXMESHOPT_ATTRSORT: u32 = 0x02000000;
+pub const D3DXMESHOPT_VERTEXCACHE: u32 = 0x04000000;
+
 
 // D3DX Functions
 
@@ -266,6 +292,26 @@ extern {
 
     // HRESULT UnlockVertexBuffer()
     fn D3DX_ID3DXBaseMesh_UnlockVertexBuffer(pMesh: *const c_void) -> D3DX_HRESULT;
+
+    // HRESULT GetDeclaration(D3DVERTEXELEMENT9 Declaration);
+    fn D3DX_ID3DXBaseMesh_GetDeclaration(pMesh: *const c_void, Declaration: *const D3DVERTEXELEMENT9) -> D3DX_HRESULT;
+
+    // HRESULT Optimize(DWORD Flags, const DWORD *pAdjacencyIn, DWORD *pAdjacencyOut, DWORD *pFaceRemap,
+    //                  LPD3DXBUFFER *ppVertexRemap, LPD3DXMESH *ppOptMesh);
+    fn D3DX_ID3DXMesh_Optimize(pMesh: *const c_void, Flags: u32, pAdjacencyIn: *const u32,
+                          pAdjacencyOut: *const u32, pFaceRemap: *const u32,
+                          ppVertexRemap: *mut LPD3DXBUFFER, ppOptMesh: *mut LPD3DXMESH) -> D3DX_HRESULT;
+
+    // HRESULT D3DXLoadMeshFromX(LPCTSTR pFilename, DWORD Options, LPDIRECT3DDEVICE9 pD3DDevice,
+    //      LPD3DXBUFFER *ppAdjacency, LPD3DXBUFFER *ppMaterials, LPD3DXBUFFER *ppEffectInstances,
+    //      DWORD *pNumMaterials, LPD3DXMESH *ppMesh)
+    fn D3DX_LoadMeshFromX(pFilename: PSTR, Options: u32, pDevice: IDirect3DDevice9,
+                          ppAdjacency: *mut LPD3DXBUFFER, ppMaterials: *mut LPD3DXBUFFER,
+                          ppEffectInstances: *mut LPD3DXBUFFER, pNumMaterials: *mut u32,
+                          ppMesh: *mut LPD3DXMESH) -> D3DX_HRESULT;
+
+    // HRESULT D3DXComputeNormals(LPD3DXBASEMESH pMesh, const DWORD *pAdjacency);
+    fn D3DX_ComputeNormals(pMesh: LPD3DXMESH, pAdjacency: *const u32) -> D3DX_HRESULT;
 
     // MATH
 
@@ -567,6 +613,34 @@ pub fn ID3DXBaseMesh_LockVertexBuffer(pMesh: *const c_void, Flags: u32, ppData: 
 #[allow(non_snake_case)]
 pub fn ID3DXBaseMesh_UnlockVertexBuffer(pMesh: *const c_void) -> Result<()> {
     unsafe { to_result(D3DX_ID3DXBaseMesh_UnlockVertexBuffer(pMesh)) }
+}
+
+#[allow(non_snake_case)]
+pub fn ID3DXBaseMesh_GetDeclaration(pMesh: *const c_void, Declaration: *const D3DVERTEXELEMENT9) -> Result<()> {
+    unsafe { to_result(D3DX_ID3DXBaseMesh_GetDeclaration(pMesh, Declaration)) }
+}
+
+#[allow(non_snake_case)]
+pub fn ID3DXMesh_Optimize(pMesh: *const c_void, Flags: u32, pAdjacencyIn: *const u32,
+                          pAdjacencyOut: *const u32, pFaceRemap: *const u32,
+                          ppVertexRemap: *mut LPD3DXBUFFER, ppOptMesh: *mut LPD3DXMESH) -> Result<()> {
+    unsafe { to_result(D3DX_ID3DXMesh_Optimize(pMesh, Flags, pAdjacencyIn, pAdjacencyOut,
+                                                    pFaceRemap, ppVertexRemap, ppOptMesh)) }
+}
+
+#[allow(non_snake_case)]
+pub fn D3DXLoadMeshFromX(pFilename: PSTR, Options: u32, pDevice: IDirect3DDevice9,
+                      ppAdjacency: *mut LPD3DXBUFFER, ppMaterials: *mut LPD3DXBUFFER,
+                      ppEffectInstances: *mut LPD3DXBUFFER, pNumMaterials: *mut u32,
+                      ppMesh: *mut LPD3DXMESH) -> Result<()> {
+    unsafe { to_result(D3DX_LoadMeshFromX(pFilename, Options, pDevice, ppAdjacency,
+                                          ppMaterials, ppEffectInstances, pNumMaterials,
+                                          ppMesh)) }
+}
+
+#[allow(non_snake_case)]
+pub fn D3DXComputeNormals(pMesh: LPD3DXMESH, pAdjacency: *const u32) -> Result<()> {
+    unsafe { to_result(D3DX_ComputeNormals(pMesh, pAdjacency)) }
 }
 
 #[allow(non_snake_case)]
