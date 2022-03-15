@@ -30,5 +30,6 @@ members = [
     "luna_26_stencil_mirror_demo",
     "luna_27_stencil_shadow_demo",
     "luna_28_x_file_demo",
-    "luna_29_bounding_box_demo"
+    "luna_29_bounding_box_demo",
+    "luna_30_robot_arm_demo"
 ]
