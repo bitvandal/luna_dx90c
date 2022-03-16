@@ -254,6 +254,10 @@ extern "C" D3DXMATRIX* D3DX_MatrixRotationX(D3DXMATRIX *pOut, FLOAT Angle) {
     return D3DXMatrixRotationX(pOut, Angle);
 }
 
+extern "C" D3DXMATRIX* D3DX_MatrixRotationY(D3DXMATRIX *pOut, FLOAT Angle) {
+    return D3DXMatrixRotationY(pOut, Angle);
+}
+
 extern "C" D3DXMATRIX* D3DX_MatrixRotationZ(D3DXMATRIX *pOut, FLOAT Angle) {
     return D3DXMatrixRotationZ(pOut, Angle);
 }

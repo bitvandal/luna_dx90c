@@ -1,8 +1,3 @@
-// Controls: Use mouse to orbit and zoom; use the 'W' and 'S' keys to
-//           alter the height of the camera.
-//           Use '1', '2', '3', '4', and '5' keys to select the bone
-//           to rotate.  Use the 'A' and 'D' keys to rotate the bone.
-
 use std::slice::from_raw_parts_mut;
 use libc::c_void;
 use windows::{
@@ -10,6 +5,9 @@ use windows::{
 };
 
 use crate::*;
+
+// Colors
+const WHITE: D3DXCOLOR = D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
 
 // Material
 #[repr(C)]
@@ -64,50 +62,50 @@ impl AABB {
     }
 }
 
-// Bone frame
-#[derive(Copy, Clone)]
-pub struct BoneFrame {
-    // Note: The root bone's "parent" frame is the world space.
-
-    pub pos: D3DXVECTOR3,       // Relative to parent frame.
-    pub z_angle: f32,           // Relative to parent frame.
-    pub to_parent_x_form: D3DXMATRIX,
-    pub to_world_x_form: D3DXMATRIX,
+// We classify the objects in our scene as one of three types.
+enum SolarType {
+    SUN,
+    PLANET,
+    MOON
 }
 
-impl Default for BoneFrame {
-    fn default() -> Self {
-        BoneFrame {
-            pos: Default::default(),
-            z_angle: 0.0,
-            to_parent_x_form: Default::default(),
-            to_world_x_form: Default::default()
-        }
-    }
+// Solar Object
+struct SolarObject {
+    // Note: The root's "parent" frame is the world space.
+    type_id: SolarType,
+    pos: D3DXVECTOR3,       // Relative to parent frame.
+    y_angle: f32,           // Relative to parent frame.
+    parent: i32,            // Index to parent frame (-1 if root, i.e., no parent)
+    size: f32,              // Relative to world frame.
+    tex: *mut c_void,       // IDirect3DTexture9
+    to_parent_x_form: D3DXMATRIX,
+    to_world_x_form: D3DXMATRIX,
 }
 
-// Our robot arm has five bones.
-const NUM_BONES: usize = 5;
+const NUM_OBJECTS: usize = 10;
 
 // Sample demo
-pub struct RobotArmDemo {
+pub struct SolarSystemDemo {
     d3d_pp: *const D3DPRESENT_PARAMETERS,
     gfx_stats: Option<GfxStats>,
 
-    // We only need one bone mesh.  To draw several bones we just draw the
-    // same mesh several times, but with a different transformation
+    // We only need one sphere mesh.  To draw several solar objects we just
+    // draw the same mesh several times, but with a different transformation
     // applied so that it is drawn in a different place.
-    bone_mesh: LPD3DXMESH,
-    mtrl: Vec<Mtrl>,
-    tex: Vec<*mut c_void>,
+    sphere: LPD3DXMESH,
 
-    bones: [BoneFrame; NUM_BONES],
+    object: [SolarObject; NUM_OBJECTS],
 
-    // Index into the bone array to the currently selected bone.
-    // The user can select a bone and rotate it.
-    bone_selected: usize,
+    sun_tex: *mut c_void,       //IDirect3DTexture9,
+    planet1_tex: *mut c_void,   //IDirect3DTexture9,
+    planet2_tex: *mut c_void,   //IDirect3DTexture9,
+    planet3_tex: *mut c_void,   //IDirect3DTexture9,
+    moon_tex: *mut c_void,      //IDirect3DTexture9,
 
-    white_tex: *mut c_void,  //IDirect3DTexture9,
+    // Use a white material--the color will come from the texture.
+    white_mtrl: Mtrl,
+
+    light: DirLight,
 
     fx: LPD3DXEFFECT,
 
@@ -120,8 +118,6 @@ pub struct RobotArmDemo {
     h_world: D3DXHANDLE,
     h_tex: D3DXHANDLE,
 
-    light: DirLight,
-
     camera_rotation_y: f32,
     camera_radius: f32,
     camera_height: f32,
@@ -131,63 +127,180 @@ pub struct RobotArmDemo {
     proj: D3DXMATRIX,
 }
 
-impl RobotArmDemo {
-    pub fn new(d3d_device: IDirect3DDevice9, d3d_pp: *const D3DPRESENT_PARAMETERS) -> Option<RobotArmDemo> {
-        if !RobotArmDemo::check_device_caps() {
+impl SolarSystemDemo {
+    pub fn new(d3d_device: IDirect3DDevice9, d3d_pp: *const D3DPRESENT_PARAMETERS) -> Option<SolarSystemDemo> {
+        if !SolarSystemDemo::check_device_caps() {
             display_error_then_quit("checkDeviceCaps() Failed");
         }
 
         init_all_vertex_declarations(d3d_device.clone());
 
-        let mut gfx_stats = GfxStats::new(d3d_device.clone(), D3DCOLOR_XRGB!(0, 0, 0));
+        let mut gfx_stats = GfxStats::new(d3d_device.clone(), D3DCOLOR_XRGB!(255, 255, 255));
 
+        // Setup a directional light.
         let mut light_dir_w = D3DXVECTOR3 { x: 0.0, y: 1.0, z: 2.0 };
         D3DXVec3Normalize(&mut light_dir_w, &light_dir_w);
 
         let light = DirLight {
-            ambient: D3DXCOLOR { r: 0.8, g: 0.8, b: 0.8, a: 1.0 },
-            diffuse: D3DXCOLOR { r: 0.8, g: 0.8, b: 0.8, a: 1.0 },
-            spec: D3DXCOLOR { r: 0.8, g: 0.8, b: 0.8, a: 1.0 },
-            dir_w: light_dir_w,
+            ambient: D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0},
+            diffuse: D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0},
+            spec: D3DXCOLOR { r: 0.6, g: 0.6, b: 0.6, a: 1.0 },
+            dir_w: light_dir_w
         };
 
-        let (bone_mesh, mtrl, tex) =
-            RobotArmDemo::load_x_file("bone.x", d3d_device.clone());
+        // Create a sphere to represent a solar object.
+        let mut sphere: LPD3DXMESH = std::ptr::null_mut();
+        HR!(D3DXCreateSphere(d3d_device.clone(), 1.0, 30, 30, &mut sphere, std::ptr::null_mut()));
+        SolarSystemDemo::gen_spherical_tex_coords(d3d_device.clone(), &mut sphere);
 
         let mut world = unsafe { std::mem::zeroed() };
         D3DXMatrixIdentity(&mut world);
 
-        // Create the white dummy texture.
-        let mut white_tex = unsafe { std::mem::zeroed() };
-        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_30_robot_arm_demo/whitetex.dds\0".as_ptr() as _), &mut white_tex));
+        // Create the textures.
+        let mut sun_tex = unsafe { std::mem::zeroed() };
+        let mut planet1_tex = unsafe { std::mem::zeroed() };
+        let mut planet2_tex = unsafe { std::mem::zeroed() };
+        let mut planet3_tex = unsafe { std::mem::zeroed() };
+        let mut moon_tex = unsafe { std::mem::zeroed() };
 
-        // Initialize the bones relative to their parent frame.
-        // The root is special--its parent frame is the world space.
-        // As such, its position and angle are ignored--its
-        // toWorldXForm should be set explicitly (that is, the world
-        // transform of the entire skeleton).
-        //
-        // *------*------*------*------
-        //    0      1      2      3
+        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_31_solar_system_demo/sun.dds\0".as_ptr() as _), &mut sun_tex));
+        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_31_solar_system_demo/planet1.dds\0".as_ptr() as _), &mut planet1_tex));
+        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_31_solar_system_demo/planet2.dds\0".as_ptr() as _), &mut planet2_tex));
+        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_31_solar_system_demo/planet3.dds\0".as_ptr() as _), &mut planet3_tex));
+        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_31_solar_system_demo/moon.dds\0".as_ptr() as _), &mut moon_tex));
 
-        let mut bones: [BoneFrame; NUM_BONES] = [BoneFrame::default(); NUM_BONES];
+        // Initialize default white material.
+        let white_mtrl = Mtrl {
+            ambient: WHITE,
+            diffuse: WHITE,
+            spec: WHITE.mult(0.5),
+            spec_power: 48.0
+        };
 
-        for i in 1..NUM_BONES { // Ignore root.
-            // Describe each bone frame relative to its parent frame.
-            bones[i].pos = D3DXVECTOR3 { x: 2.0, y: 0.0, z: 0.0 };
-            bones[i].z_angle = 0.0;
-        }
+        //==================================================
+        // Specify how the solar object frames are related.
 
-        // Root frame at center of world.
-        bones[0].pos = D3DXVECTOR3 { x: 0.0, y: 0.0, z: 0.0 };
-        bones[0].z_angle = 0.0;
+        let pos: [D3DXVECTOR3; NUM_OBJECTS] = [
+            D3DXVECTOR3 { x:  0.0, y: 0.0, z:  0.0 },
+            D3DXVECTOR3 { x:  7.0, y: 0.0, z:  7.0 },
+            D3DXVECTOR3 { x: -9.0, y: 0.0, z:  0.0 },
+            D3DXVECTOR3 { x:  7.0, y: 0.0, z: -6.0 },
+            D3DXVECTOR3 { x:  5.0, y: 0.0, z:  0.0 },
+            D3DXVECTOR3 { x: -5.0, y: 0.0, z:  0.0 },
+            D3DXVECTOR3 { x:  3.0, y: 0.0, z:  0.0 },
+            D3DXVECTOR3 { x:  2.0, y: 0.0, z: -2.0 },
+            D3DXVECTOR3 { x: -2.0, y: 0.0, z:  0.0 },
+            D3DXVECTOR3 { x:  0.0, y: 0.0, z:  2.0 },
+        ];
 
-        // Start off with the last (leaf) bone:
-        let bone_selected = NUM_BONES - 1;
+        let object: [SolarObject; NUM_OBJECTS] = [
+            SolarObject { // SUN
+                type_id: SolarType::SUN,
+                pos: pos[0],
+                y_angle: 0.0,
+                parent: -1,
+                size: 2.5,
+                tex: sun_tex,
+                to_parent_x_form: Default::default(),
+                to_world_x_form: Default::default()
+            },
+            SolarObject { // P1
+                type_id: SolarType::PLANET,
+                pos: pos[1],
+                y_angle: 0.0,
+                parent: 0,
+                size: 1.5,
+                tex: planet1_tex,
+                to_parent_x_form: Default::default(),
+                to_world_x_form: Default::default()
+            },
+            SolarObject { // P2
+                type_id: SolarType::PLANET,
+                pos: pos[2],
+                y_angle: 0.0,
+                parent: 0,
+                size: 1.2,
+                tex: planet2_tex,
+                to_parent_x_form: Default::default(),
+                to_world_x_form: Default::default()
+            },
+            SolarObject { // P3
+                type_id: SolarType::PLANET,
+                pos: pos[3],
+                y_angle: 0.0,
+                parent: 0,
+                size: 0.8,
+                tex: planet3_tex,
+                to_parent_x_form: Default::default(),
+                to_world_x_form: Default::default()
+            },
+            SolarObject { // M1P1
+                type_id: SolarType::MOON,
+                pos: pos[4],
+                y_angle: 0.0,
+                parent: 1,
+                size: 0.5,
+                tex: moon_tex,
+                to_parent_x_form: Default::default(),
+                to_world_x_form: Default::default()
+            },
+            SolarObject { // M2P1
+                type_id: SolarType::MOON,
+                pos: pos[5],
+                y_angle: 0.0,
+                parent: 1,
+                size: 0.5,
+                tex: moon_tex,
+                to_parent_x_form: Default::default(),
+                to_world_x_form: Default::default()
+            },
+            SolarObject { // M1P2
+                type_id: SolarType::MOON,
+                pos: pos[6],
+                y_angle: 0.0,
+                parent: 2,
+                size: 0.4,
+                tex: moon_tex,
+                to_parent_x_form: Default::default(),
+                to_world_x_form: Default::default()
+            },
+            SolarObject { // M1P3
+                type_id: SolarType::MOON,
+                pos: pos[7],
+                y_angle: 0.0,
+                parent: 3,
+                size: 0.3,
+                tex: moon_tex,
+                to_parent_x_form: Default::default(),
+                to_world_x_form: Default::default()
+            },
+            SolarObject { // M2P3
+                type_id: SolarType::MOON,
+                pos: pos[8],
+                y_angle: 0.0,
+                parent: 3,
+                size: 0.3,
+                tex: moon_tex,
+                to_parent_x_form: Default::default(),
+                to_world_x_form: Default::default()
+            },
+            SolarObject { // M3P3
+                type_id: SolarType::MOON,
+                pos: pos[9],
+                y_angle: 0.0,
+                parent: 3,
+                size: 0.3,
+                tex: moon_tex,
+                to_parent_x_form: Default::default(),
+                to_world_x_form: Default::default()
+            },
+        ];
+
+        //==================================================
 
         if let Some(gfx_stats) = &mut gfx_stats {
-            gfx_stats.add_vertices(ID3DXBaseMesh_GetNumVertices(bone_mesh));
-            gfx_stats.add_triangles(ID3DXBaseMesh_GetNumFaces(bone_mesh));
+            gfx_stats.add_vertices(ID3DXBaseMesh_GetNumVertices(sphere));
+            gfx_stats.add_triangles(ID3DXBaseMesh_GetNumFaces(sphere));
         }
 
         let (fx,
@@ -199,21 +312,24 @@ impl RobotArmDemo {
             h_eye_pos,
             h_world,
             h_tex) =
-            RobotArmDemo::build_fx(d3d_device.clone());
+            SolarSystemDemo::build_fx(d3d_device.clone());
 
-        let mut robot_arm_demo = RobotArmDemo {
+        let mut solar_system_demo = SolarSystemDemo {
             d3d_pp,
             gfx_stats,
 
-            bone_mesh,
+            sphere,
 
-            mtrl,
-            tex,
+            object,
+            sun_tex,
+            planet1_tex,
+            planet2_tex,
+            planet3_tex,
+            moon_tex,
 
-            bones,
-            bone_selected,
+            white_mtrl,
 
-            white_tex,
+            light,
 
             fx,
 
@@ -226,21 +342,18 @@ impl RobotArmDemo {
             h_world,
             h_tex,
 
-            light,
-
-            camera_radius: 9.0,
-            camera_rotation_y: 1.5 * D3DX_PI,
-            camera_height: 0.0,
+            camera_radius: 25.0,
+            camera_rotation_y: 1.2 * D3DX_PI,
+            camera_height: 10.0,
 
             world,
-
             view: unsafe { std::mem::zeroed() },
             proj: unsafe { std::mem::zeroed() },
         };
 
-        robot_arm_demo.on_reset_device();
+        solar_system_demo.on_reset_device();
 
-        Some(robot_arm_demo)
+        Some(solar_system_demo)
     }
 
     pub fn release_com_objects(&self) {
@@ -249,11 +362,13 @@ impl RobotArmDemo {
         }
 
         ReleaseCOM(self.fx);
-        ReleaseCOM(self.bone_mesh);
+        ReleaseCOM(self.sphere);
 
-        for tex in &self.tex {
-            ReleaseCOM(tex.cast());
-        }
+        ReleaseCOM(self.sun_tex.cast());
+        ReleaseCOM(self.planet1_tex.cast());
+        ReleaseCOM(self.planet2_tex.cast());
+        ReleaseCOM(self.planet3_tex.cast());
+        ReleaseCOM(self.moon_tex.cast());
 
         destroy_all_vertex_declarations();
     }
@@ -318,41 +433,6 @@ impl RobotArmDemo {
                     self.camera_height -= 25.0 * dt;
                 }
 
-                // Allow the user to select a bone (zero based index)
-                if dinput.key_down(DIK_1 as usize) {
-                    self.bone_selected = 0;
-                }
-
-                if dinput.key_down(DIK_2 as usize) {
-                    self.bone_selected = 1;
-                }
-
-                if dinput.key_down(DIK_3 as usize) {
-                    self.bone_selected = 2;
-                }
-
-                if dinput.key_down(DIK_4 as usize) {
-                    self.bone_selected = 3;
-                }
-
-                if dinput.key_down(DIK_5 as usize) {
-                    self.bone_selected = 4;
-                }
-
-                // Allow the user to rotate a bone.
-                if dinput.key_down(DIK_A as usize) {
-                    self.bones[self.bone_selected].z_angle += 1.0 * dt;
-                }
-
-                if dinput.key_down(DIK_D as usize) {
-                    self.bones[self.bone_selected].z_angle -= 1.0 * dt;
-                }
-
-                // If we rotate over 360 degrees, just roll back to 0
-                if self.bones[self.bone_selected].z_angle.abs() >= 2.0 * D3DX_PI {
-                    self.bones[self.bone_selected].z_angle = 0.0;
-                }
-
                 // Divide by 50 to make mouse less sensitive.
                 self.camera_rotation_y += dinput.mouse_dx() / 100.0;
                 self.camera_radius += dinput.mouse_dy() / 25.0;
@@ -371,6 +451,28 @@ impl RobotArmDemo {
                 // change every frame based on input, so we need to rebuild the
                 // view matrix every frame with the latest changes.
                 self.build_view_mtx();
+
+                //================================================
+                // Animate the solar objects with respect to time.
+
+                for i in 0..NUM_OBJECTS {
+                    match &self.object[i].type_id {
+                        SolarType::SUN => {
+                            self.object[i].y_angle += 1.5 * dt;
+                        },
+                        SolarType::PLANET => {
+                            self.object[i].y_angle += 2.0 * dt;
+                        },
+                        SolarType::MOON => {
+                            self.object[i].y_angle += 2.5 * dt;
+                        }
+                    }
+
+                    // If we rotate over 360 degrees, just roll back to 0.
+                    if self.object[i].y_angle >= 2.0 * D3DX_PI {
+                        self.object[i].y_angle = 0.0;
+                    }
+                }
             }
         }
     }
@@ -383,7 +485,7 @@ impl RobotArmDemo {
                     0,
                     std::ptr::null(),
                     (D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER) as u32,
-                    0xFFFFFFFF,
+                    0xFF000000,
                     1.0,
                     0));
 
@@ -398,17 +500,22 @@ impl RobotArmDemo {
 
                 HR!(ID3DXEffect_BeginPass(self.fx, 0));
 
-                // Build the world transforms for each bone, then render them.
-                self.build_bone_world_transforms();
+                // Wrap the texture coordinates that get assigned to TEXCOORD2 in the pixel shader.
+                HR!(d3d_device.SetRenderState(D3DRS_WRAP2, D3DWRAP_U as u32));
 
-                let mut t: D3DXMATRIX = std::mem::zeroed();
-                D3DXMatrixTranslation(&mut t, -(NUM_BONES as f32), 0.0, 0.0);
+                // Build the world transforms for each frame, then render them.
+                self.build_object_world_transforms();
 
-                for i in 0..NUM_BONES {
-                    // Append the transformation with a slight translation to better
-                    // center the skeleton at the center of the scene.
+                let mut s: D3DXMATRIX = std::mem::zeroed();
+
+                for i in 0..NUM_OBJECTS {
+                    let scale = self.object[i].size;
+                    D3DXMatrixScaling(&mut s, scale, scale, scale);
+
+                    // Prefix the frame matrix with a scaling transformation to
+                    // size it relative to the world.
                     self.world = std::mem::zeroed();
-                    D3DXMatrixMultiply(&mut self.world, &self.bones[i].to_world_x_form, &t);
+                    D3DXMatrixMultiply(&mut self.world, &s, &self.object[i].to_world_x_form);
 
                     let mut res: D3DXMATRIX = std::mem::zeroed();
                     D3DXMatrixMultiply(&mut res, &self.world, &self.view);
@@ -422,24 +529,14 @@ impl RobotArmDemo {
 
                     HR!(ID3DXBaseEffect_SetMatrix(self.fx, self.h_world, &self.world));
 
-                    for j in 0..self.mtrl.len() {
-                        HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_mtrl, &self.mtrl[j] as *const _ as _, std::mem::size_of::<Mtrl>() as u32));
+                    HR!(ID3DXBaseEffect_SetValue(self.fx, self.h_mtrl, &self.white_mtrl as *const _ as _, std::mem::size_of::<Mtrl>() as u32));
+                    HR!(ID3DXBaseEffect_SetTexture(self.fx, self.h_tex, self.object[i].tex));
 
-                        // If there is a texture, then use.
-                        if !self.tex[j].is_null() {
-                            HR!(ID3DXBaseEffect_SetTexture(self.fx, self.h_tex, self.tex[j]));
-                        } else {
-                            // But if not, then set a pure white texture.  When the texture color
-                            // is multiplied by the color from lighting, it is like multiplying by
-                            // 1 and won't change the color from lighting.
-
-                            HR!(ID3DXBaseEffect_SetTexture(self.fx, self.h_tex, self.white_tex));
-                        }
-
-                        HR!(ID3DXEffect_CommitChanges(self.fx));
-                        HR!(ID3DXBaseMesh_DrawSubset(self.bone_mesh, j as u32));
-                    }
+                    HR!(ID3DXEffect_CommitChanges(self.fx));
+                    HR!(ID3DXBaseMesh_DrawSubset(self.sphere, 0));
                 }
+
+                HR!(d3d_device.SetRenderState(D3DRS_WRAP2, 0));
 
                 HR!(ID3DXEffect_EndPass(self.fx));
                 HR!(ID3DXEffect_End(self.fx));
@@ -483,7 +580,7 @@ impl RobotArmDemo {
         let mut fx: LPD3DXEFFECT = std::ptr::null_mut();
         let mut errors: LPD3DXBUFFER = std::ptr::null_mut();
 
-        HR!(D3DXCreateEffectFromFile(d3d_device, PSTR(b"luna_30_robot_arm_demo/PhongDirLtTex.fx\0".as_ptr() as _),
+        HR!(D3DXCreateEffectFromFile(d3d_device, PSTR(b"luna_31_solar_system_demo/PhongDirLtTex.fx\0".as_ptr() as _),
             std::ptr::null(), std::ptr::null(), D3DXSHADER_DEBUG,
             std::ptr::null(), &mut fx, &mut errors));
 
@@ -511,6 +608,7 @@ impl RobotArmDemo {
         (fx, h_tech, h_wvp, h_world_inverse_transpose, h_mtrl, h_light, h_eye_pos, h_world, h_tex)
     }
 
+    #[allow(dead_code)]
     fn load_x_file(filename: &str, d3d_device: IDirect3DDevice9) -> (LPD3DXMESH, Vec<Mtrl>, Vec<*mut c_void>) {
         unsafe {
             let mut mesh_out: LPD3DXMESH = std::ptr::null_mut();
@@ -631,7 +729,7 @@ impl RobotArmDemo {
         }
     }
 
-    fn build_bone_world_transforms(&mut self) {
+    fn build_object_world_transforms(&mut self) {
         unsafe {
             // First, construct the transformation matrix that transforms
             // the ith bone into the coordinate system of its parent.
@@ -639,40 +737,91 @@ impl RobotArmDemo {
             let mut t: D3DXMATRIX = std::mem::zeroed();
             let mut p: D3DXVECTOR3;
 
-            for i in 0..NUM_BONES {
-                p = self.bones[i].pos;
-                D3DXMatrixRotationZ(&mut r, self.bones[i].z_angle);
+            for i in 0..NUM_OBJECTS {
+                p = self.object[i].pos;
+                D3DXMatrixRotationY(&mut r, self.object[i].y_angle);
                 D3DXMatrixTranslation(&mut t, p.x, p.y, p.z);
 
-                D3DXMatrixMultiply(&mut self.bones[i].to_parent_x_form, &r, &t);
+                D3DXMatrixMultiply(&mut self.object[i].to_parent_x_form, &r, &t);
             }
 
-            // Now, the ith object's world transform is given by its
-            // to-parent transform, followed by its parent's to-parent transform,
-            // followed by its grandparent's to-parent transform, and
-            // so on, up to the root's to-parent transform.
-
-            // For each bone...
-            for i in 0..NUM_BONES {
+            // For each object...
+            for i in 0..NUM_OBJECTS {
                 // Initialize to identity matrix.
-                D3DXMatrixIdentity(&mut self.bones[i].to_world_x_form);
+                D3DXMatrixIdentity(&mut self.object[i].to_world_x_form);
 
-                // Combine  W[i] = W[i]*W[i-1]*...*W[0].
-                let mut j = i as i32;
-                while j >= 0 {
-                    D3DXMatrixMultiply(&mut self.bones[i].to_world_x_form,
-                                       &self.bones[i].to_world_x_form,
-                                       &self.bones[j as usize].to_parent_x_form);
+                // The ith object's world transform is given by its
+                // to-parent transform, followed by its parent's to-parent transform,
+                // followed by its grandparent's to-parent transform, and
+                // so on, up to the root's to-parent transform.
+                let mut k: i32 = i as i32;
+                while k != -1 {
+                    D3DXMatrixMultiply(&mut self.object[i].to_world_x_form,
+                                       &self.object[i].to_world_x_form,
+                                       &self.object[k as usize].to_parent_x_form);
 
-                    j = j - 1;
+                    k = self.object[k as usize].parent;
                 }
             }
+        }
+    }
+
+    fn gen_spherical_tex_coords(d3d_device: IDirect3DDevice9, sphere: &mut LPD3DXMESH) {
+        // D3DXCreate* functions generate vertices with position
+        // and normal data.  But for texturing, we also need
+        // tex-coords.  So clone the mesh to change the vertex
+        // format to a format with tex-coords.
+        let mut elements: [D3DVERTEXELEMENT9; 64] = [D3DVERTEXELEMENT9::default(); 64];
+        let mut num_elements: u32 = 0;
+        unsafe {
+            if let Some(decl) = &VERTEX_PNT_DECL {
+                HR!(decl.GetDeclaration(elements.as_mut_ptr(), &mut num_elements));
+            }
+
+            let mut temp: LPD3DXMESH = std::ptr::null_mut();
+            HR!(ID3DXBaseMesh_CloneMesh(*sphere, D3DXMESH_SYSTEMMEM, elements.as_mut_ptr(),
+                d3d_device.clone(), &mut temp));
+
+            ReleaseCOM(*sphere);
+
+            // Now generate texture coordinates for each vertex.
+            let mut verts: *mut c_void = std::ptr::null_mut();
+            HR!(ID3DXBaseMesh_LockVertexBuffer(temp, 0, &mut verts));
+
+            let num_vertices: usize = ID3DXBaseMesh_GetNumVertices(temp) as usize;
+            let vertices: &mut [VertexPNT] = from_raw_parts_mut(verts as *mut VertexPNT, num_vertices);
+
+            for i in 0..num_vertices {
+                // Convert to spherical coordinates.
+                let p: D3DXVECTOR3 = vertices[i].pos;
+
+                let theta: f32 = p.z.atan2(p.x);
+                let phi: f32 = (p.y / (p.x * p.x + p.y * p.y + p.z * p.z).sqrt()).acos();
+
+                // Phi and theta give the texture coordinates, but are not in
+                // the range [0, 1], so scale them into that range.
+
+                let u: f32 = theta / (2.0 * D3DX_PI);
+                let v: f32 = phi / D3DX_PI;
+
+                // Save texture coordinates.
+                vertices[i].tex0.x = u;
+                vertices[i].tex0.y = v;
+            }
+
+            HR!(ID3DXBaseMesh_UnlockVertexBuffer(temp));
+
+            // Clone back to a hardware mesh.
+            HR!(ID3DXBaseMesh_CloneMesh(temp, D3DXMESH_MANAGED | D3DXMESH_WRITEONLY, elements.as_mut_ptr(),
+                d3d_device.clone(), sphere));
+
+            ReleaseCOM(temp);
         }
     }
 }
 
 fn build_file_path(filename: &str) -> String {
-    let mut filepath = String::from("luna_30_robot_arm_demo/");
+    let mut filepath = String::from("luna_31_solar_system_demo/");
     filepath.push_str(filename);
     filepath.push_str("\0");
     filepath

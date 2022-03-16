@@ -65,7 +65,7 @@ pub struct D3DXVECTOR4 {
     pub w: f32,
 }
 
-pub const D3DX_PI: f32 = 3.14159265358979323846;
+pub const D3DX_PI: f32 = std::f32::consts::PI;
 
 #[repr(C)]
 pub struct D3DXCOLOR {
@@ -352,6 +352,9 @@ extern {
 
     // D3DXMATRIX* D3DXMatrixRotationX(D3DXMATRIX *pOut, FLOAT Angle)
     fn D3DX_MatrixRotationX(pOut: *mut D3DXMATRIX, Angle: f32) -> *mut D3DXMATRIX;
+
+    // D3DXMATRIX* D3DXMatrixRotationY(D3DXMATRIX *pOut, FLOAT Angle)
+    fn D3DX_MatrixRotationY(pOut: *mut D3DXMATRIX, Angle: f32) -> *mut D3DXMATRIX;
 
     // D3DXMATRIX* D3DXMatrixRotationZ(D3DXMATRIX *pOut, FLOAT Angle)
     fn D3DX_MatrixRotationZ(pOut: *mut D3DXMATRIX, Angle: f32) -> *mut D3DXMATRIX;
@@ -705,6 +708,11 @@ pub fn D3DXMatrixMultiply(pOut: *mut D3DXMATRIX, pM1: *const D3DXMATRIX, pM2: *c
 #[allow(non_snake_case)]
 pub fn D3DXMatrixRotationX(pOut: *mut D3DXMATRIX, Angle: f32) -> *mut D3DXMATRIX {
     unsafe { D3DX_MatrixRotationX(pOut, Angle) }
+}
+
+#[allow(non_snake_case)]
+pub fn D3DXMatrixRotationY(pOut: *mut D3DXMATRIX, Angle: f32) -> *mut D3DXMATRIX {
+    unsafe { D3DX_MatrixRotationY(pOut, Angle) }
 }
 
 #[allow(non_snake_case)]
