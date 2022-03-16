@@ -3,16 +3,9 @@ use libc::c_void;
 use windows::{
     Win32::Foundation::*, Win32::Graphics::Direct3D9::*, Win32::System::SystemServices::*,
 };
+use common::mtrl::Mtrl;
 
 use crate::*;
-
-// Material
-struct Mtrl {
-    pub ambient: D3DXCOLOR,
-    pub diffuse: D3DXCOLOR,
-    pub spec: D3DXCOLOR,
-    pub spec_power: f32,
-}
 
 // Sample demo
 pub struct GateDemo {

@@ -1,3 +1,5 @@
+use windows::Win32::Graphics::Direct3D9::*;
+use d3dx::*;
 use crate::*;
 
 pub struct VertexPos {
@@ -122,6 +124,7 @@ pub fn init_all_vertex_declarations(d3d_device: IDirect3DDevice9) {
         ];
 
         VERTEX_PNT_DECL = Some(d3d_device.CreateVertexDeclaration(vertex_pnt_elements.as_ptr()).unwrap());
+
 
         let vertex_pt_elements: [D3DVERTEXELEMENT9; 3] = [
             D3DVERTEXELEMENT9 {

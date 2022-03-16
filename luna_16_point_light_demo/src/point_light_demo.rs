@@ -2,6 +2,7 @@ use libc::c_void;
 use windows::{
     Win32::Foundation::*, Win32::Graphics::Direct3D9::*, Win32::System::SystemServices::*,
 };
+use common::mtrl::Mtrl;
 
 use crate::*;
 
@@ -10,14 +11,6 @@ const WHITE: D3DXCOLOR = D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
 const RED: D3DXCOLOR = D3DXCOLOR { r: 1.0, g: 0.0, b: 0.0, a: 1.0 };
 const GREEN: D3DXCOLOR = D3DXCOLOR { r: 0.0, g: 1.0, b: 0.0, a: 1.0 };
 const BLUE: D3DXCOLOR = D3DXCOLOR { r: 0.0, g: 0.0, b: 1.0, a: 1.0 };
-
-// Material
-struct Mtrl {
-    pub ambient: D3DXCOLOR,
-    pub diffuse: D3DXCOLOR,
-    pub spec: D3DXCOLOR,
-    pub spec_power: f32,
-}
 
 // Sample demo
 pub struct PointLightDemo {

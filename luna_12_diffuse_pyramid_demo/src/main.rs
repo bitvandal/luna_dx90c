@@ -1,5 +1,4 @@
 pub mod diffuse_pyramid_demo;
-pub mod vertex;
 
 use windows::{
     Win32::Foundation::*, Win32::System::LibraryLoader::GetModuleHandleA,
@@ -14,7 +13,6 @@ use d3dx::*;
 use std::ffi::{CStr};
 
 use crate::diffuse_pyramid_demo::*;
-use crate::vertex::*;
 
 // D3D App
 pub struct D3DApp {

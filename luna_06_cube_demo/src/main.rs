@@ -1,5 +1,4 @@
 pub mod cube_demo;
-pub mod vertex;
 
 use windows::{
     Win32::Foundation::*, Win32::System::LibraryLoader::GetModuleHandleA,
@@ -13,7 +12,6 @@ use common::*;
 use d3dx::*;
 
 use crate::cube_demo::*;
-use crate::vertex::*;
 
 // D3D App
 pub struct D3DApp {

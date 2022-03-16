@@ -14,7 +14,6 @@ pub struct TriGridDemo {
     camera_height: f32,
     view: D3DXMATRIX,
     proj: D3DXMATRIX,
-    decl: IDirect3DVertexDeclaration9,
     num_vertices: u32,
     num_triangles: u32,
     fx: LPD3DXEFFECT,
@@ -36,6 +35,8 @@ impl TriGridDemo {
 
         let (fx, h_tech, h_wvp) = build_fx(d3d_device.clone());
 
+        init_all_vertex_declarations(d3d_device.clone());
+
         let mut tri_grid_demo = TriGridDemo {
             vb,
             ib,
@@ -44,7 +45,6 @@ impl TriGridDemo {
             camera_height: 5.0,
             view: unsafe { std::mem::zeroed() },
             proj: unsafe { std::mem::zeroed() },
-            decl: init_all_vertex_declarations(d3d_device.clone()).unwrap(),
             // Save vertex count and triangle count for DrawIndexedPrimitive arguments.
             num_vertices: 100 * 100,
             num_triangles: 99 * 99 * 2,
@@ -67,7 +67,7 @@ impl TriGridDemo {
 
         ReleaseCOM(self.fx);
 
-        destroy_all_vertex_declarations(&self.decl);
+        destroy_all_vertex_declarations();
     }
 
     fn check_device_caps() -> bool {
@@ -172,7 +172,7 @@ impl TriGridDemo {
                 // declaration we are using.
                 HR!(d3d_device.SetStreamSource(0, &self.vb, 0, std::mem::size_of::<VertexPos>() as u32));
                 HR!(d3d_device.SetIndices(&self.ib));
-                HR!(d3d_device.SetVertexDeclaration(&self.decl));
+                HR!(d3d_device.SetVertexDeclaration(&VERTEX_POS_DECL));
 
                 // Setup the rendering FX
                 HR!(ID3DXEffect_SetTechnique(self.fx, self.h_tech));

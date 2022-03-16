@@ -1,5 +1,4 @@
 pub mod cloud_demo;
-pub mod vertex;
 
 use windows::{
     Win32::Foundation::*, Win32::System::LibraryLoader::GetModuleHandleA,
@@ -14,7 +13,6 @@ use d3dx::*;
 use std::ffi::{CStr};
 
 use crate::cloud_demo::*;
-use crate::vertex::*;
 
 // D3D App
 pub struct D3DApp {

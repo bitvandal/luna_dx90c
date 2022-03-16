@@ -14,7 +14,6 @@ pub struct CubeDemo {
     camera_height: f32,
     view: D3DXMATRIX,
     proj: D3DXMATRIX,
-    decl: IDirect3DVertexDeclaration9,
     gfx_stats: Option<GfxStats>,
     d3d_pp: *const D3DPRESENT_PARAMETERS,
 }
@@ -27,6 +26,8 @@ impl CubeDemo {
 
         let gfx_stats = GfxStats::new(d3d_device.clone(), D3DCOLOR_XRGB!(0, 0, 0));
 
+        init_all_vertex_declarations(d3d_device.clone());
+
         let mut cube_demo = CubeDemo {
             vb: build_vertex_buffer(d3d_device.clone()),
             ib: build_index_buffer(d3d_device.clone()),
@@ -35,7 +36,6 @@ impl CubeDemo {
             camera_height: 5.0,
             view: unsafe { std::mem::zeroed() },
             proj: unsafe { std::mem::zeroed() },
-            decl: init_all_vertex_declarations(d3d_device).unwrap(),
             gfx_stats,
             d3d_pp,
         };
@@ -50,7 +50,7 @@ impl CubeDemo {
             gfx_stats.release_com_objects();
         }
 
-        destroy_all_vertex_declarations(&self.decl);
+        destroy_all_vertex_declarations();
     }
 
     fn check_device_caps() -> bool {
@@ -136,7 +136,7 @@ impl CubeDemo {
                 // declaration we are using.
                 HR!(d3d_device.SetStreamSource(0, &self.vb, 0, std::mem::size_of::<VertexPos>() as u32));
                 HR!(d3d_device.SetIndices(&self.ib));
-                HR!(d3d_device.SetVertexDeclaration(&self.decl));
+                HR!(d3d_device.SetVertexDeclaration(&VERTEX_POS_DECL));
 
                 // World matrix is identity.
                 let mut w: D3DXMATRIX = std::mem::zeroed();

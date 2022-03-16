@@ -120,9 +120,9 @@ impl GfxStats {
         // (Maybe) an improvement can be to reserve some fixed size memory in the heap
         // and use it instead of creating a new String on every frame. This is what the
         // book does anyway.
-        let buffer: String = format!("Frames Per Second = {:.2}\n \
-                Milliseconds Per Frame = {:.4}\n \
-                Triangle Count = {}\n \
+        let buffer: String = format!("Frames Per Second = {:.2}\n\
+                Milliseconds Per Frame = {:.4}\n\
+                Triangle Count = {}\n\
                 Vertex Count = {}\0",
                          self.fps, self.millisec_per_frame, self.num_tris, self.num_vertices);
 

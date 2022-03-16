@@ -2,31 +2,15 @@
 //           alter the height of the camera.
 
 use libc::c_void;
-use std::slice::{from_raw_parts_mut};
 use windows::{
     Win32::Foundation::*, Win32::Graphics::Direct3D9::*, Win32::System::SystemServices::*,
 };
+use common::mtrl::Mtrl;
 
 use crate::*;
 
 // Colors
 const WHITE: D3DXCOLOR = D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
-
-// Material
-struct Mtrl {
-    pub ambient: D3DXCOLOR,
-    pub diffuse: D3DXCOLOR,
-    pub spec: D3DXCOLOR,
-    pub spec_power: f32,
-}
-
-#[allow(unused)]
-// Cylinder Axis
-enum Axis {
-    X,
-    Y,
-    Z
-}
 
 // Sample demo
 pub struct SphereCylTexDemo {
@@ -122,10 +106,10 @@ impl SphereCylTexDemo {
 
         init_all_vertex_declarations(d3d_device.clone());
 
-        SphereCylTexDemo::gen_spherical_tex_coords(d3d_device.clone(), &mut sphere);
+        gen_spherical_tex_coords(d3d_device.clone(), &mut sphere);
 
         // D3DXCreateCylinder doc says: The created cylinder is centered at the origin, and its axis is aligned with the z-axis.
-        SphereCylTexDemo::gen_cyl_tex_coords(d3d_device.clone(), &mut cylinder, Axis::Z);
+        gen_cyl_tex_coords(d3d_device.clone(), &mut cylinder, Axis::Z);
 
         let mut sphere_tex: *mut c_void = std::ptr::null_mut();
         let mut cyl_tex: *mut c_void = std::ptr::null_mut();
@@ -645,173 +629,6 @@ impl SphereCylTexDemo {
 
             // Disable.
             HR!(d3d_device.SetRenderState(D3DRS_WRAP0, 0));
-        }
-    }
-
-    fn gen_spherical_tex_coords(d3d_device: IDirect3DDevice9, sphere: &mut LPD3DXMESH) {
-        // D3DXCreate* functions generate vertices with position
-        // and normal data.  But for texturing, we also need
-        // tex-coords.  So clone the mesh to change the vertex
-        // format to a format with tex-coords.
-        let mut elements: [D3DVERTEXELEMENT9; 64] = [D3DVERTEXELEMENT9::default(); 64];
-        let mut num_elements: u32 = 0;
-        unsafe {
-            if let Some(decl) = &VERTEX_PNT_DECL {
-                HR!(decl.GetDeclaration(elements.as_mut_ptr(), &mut num_elements));
-            }
-
-            let mut temp: LPD3DXMESH = std::ptr::null_mut();
-            HR!(ID3DXBaseMesh_CloneMesh(*sphere, D3DXMESH_SYSTEMMEM, elements.as_mut_ptr(),
-                d3d_device.clone(), &mut temp));
-
-            ReleaseCOM(*sphere);
-
-            // Now generate texture coordinates for each vertex.
-            let mut verts: *mut c_void = std::ptr::null_mut();
-            HR!(ID3DXBaseMesh_LockVertexBuffer(temp, 0, &mut verts));
-
-            let num_vertices: usize = ID3DXBaseMesh_GetNumVertices(temp) as usize;
-            let vertices: &mut [VertexPNT] = from_raw_parts_mut(verts as *mut VertexPNT, num_vertices);
-
-            for i in 0..num_vertices {
-                // Convert to spherical coordinates.
-                let p: D3DXVECTOR3 = vertices[i].pos;
-
-                let theta: f32 = p.z.atan2(p.x);
-                let phi: f32 = (p.y / (p.x * p.x + p.y * p.y + p.z * p.z).sqrt()).acos();
-
-                // Phi and theta give the texture coordinates, but are not in
-                // the range [0, 1], so scale them into that range.
-
-                let u: f32 = theta / (2.0 * D3DX_PI);
-                let v: f32 = phi / D3DX_PI;
-
-                // Save texture coordinates.
-                vertices[i].tex0.x = u;
-                vertices[i].tex0.y = v;
-            }
-
-            HR!(ID3DXBaseMesh_UnlockVertexBuffer(temp));
-
-            // Clone back to a hardware mesh.
-            HR!(ID3DXBaseMesh_CloneMesh(temp, D3DXMESH_MANAGED | D3DXMESH_WRITEONLY, elements.as_mut_ptr(),
-                d3d_device.clone(), sphere));
-
-            ReleaseCOM(temp);
-        }
-    }
-
-    fn gen_cyl_tex_coords(d3d_device: IDirect3DDevice9, cylinder: &mut LPD3DXMESH, axis: Axis) {
-        // D3DXCreate* functions generate vertices with position
-        // and normal data.  But for texturing, we also need
-        // tex-coords.  So clone the mesh to change the vertex
-        // format to a format with tex-coords.
-        let mut elements: [D3DVERTEXELEMENT9; 64] = [D3DVERTEXELEMENT9::default(); 64];
-        let mut num_elements: u32 = 0;
-        unsafe {
-            if let Some(decl) = &VERTEX_PNT_DECL {
-                HR!(decl.GetDeclaration(elements.as_mut_ptr(), &mut num_elements));
-            }
-
-            let mut temp: LPD3DXMESH = std::ptr::null_mut();
-            HR!(ID3DXBaseMesh_CloneMesh(*cylinder, D3DXMESH_SYSTEMMEM, elements.as_mut_ptr(),
-                d3d_device.clone(), &mut temp));
-
-            ReleaseCOM(*cylinder);
-
-            // Now generate texture coordinates for each vertex.
-            let mut verts: *mut c_void = std::ptr::null_mut();
-            HR!(ID3DXBaseMesh_LockVertexBuffer(temp, 0, &mut verts));
-
-            // We need to get the height of the cylinder we are projecting the
-            // vertices onto.  That height depends on which axis the client has
-            // specified that the cylinder lies on.  The height is determined by
-            // finding the height of the bounding cylinder on the specified axis.
-
-            let mut max_point = D3DXVECTOR3 { x: -f32::MAX, y: -f32::MAX, z: -f32::MAX };
-            let mut min_point = D3DXVECTOR3 { x: f32::MAX, y: f32::MAX, z: f32::MAX };
-
-            let num_vertices: usize = ID3DXBaseMesh_GetNumVertices(temp) as usize;
-            let vertices: &mut [VertexPNT] = from_raw_parts_mut(verts as *mut VertexPNT, num_vertices);
-
-            for i in 0..num_vertices {
-                D3DXVec3Maximize(&mut max_point, &max_point, &vertices[i].pos);
-                D3DXVec3Minimize(&mut min_point, &min_point, &vertices[i].pos);
-            }
-
-            let a: f32;
-            let b: f32;
-            let h: f32;
-
-            match axis {
-                Axis::X => {
-                    a = min_point.x;
-                    b = max_point.x;
-                    h = b - a;
-                },
-                Axis::Y => {
-                    a = min_point.y;
-                    b = max_point.y;
-                    h = b - a;
-                },
-                Axis::Z => {
-                    a = min_point.z;
-                    b = max_point.z;
-                    h = b - a;
-                }
-            }
-
-            // Iterate over each vertex and compute its texture coordinate.
-
-            for i in 0..num_vertices {
-                 // Get the coordinates along the axes orthogonal to the
-                 // axis the cylinder is aligned with.
-                let x: f32;
-                let y: f32;
-                let z: f32;
-
-                match axis {
-                    Axis::X => {
-                        x = vertices[i].pos.y;
-                        z = vertices[i].pos.z;
-                        y = vertices[i].pos.x;
-                    },
-                    Axis::Y => {
-                        x = vertices[i].pos.x;
-                        z = vertices[i].pos.z;
-                        y = vertices[i].pos.y;
-                    },
-                    Axis::Z => {
-                        x = vertices[i].pos.x;
-                        z = vertices[i].pos.y;
-                        y = vertices[i].pos.z;
-                    }
-                }
-
-                // Convert to cylindrical coordinates.
-
-                let theta = z.atan2(x);
-                let y2 = y - b; // Transform [a, b] --> [-h, 0]
-
-                // Transform theta from [0, 2*pi] to [0, 1] range and
-                // transform y2 from [-h, 0] to [0, 1].
-
-                let u: f32 = theta / (2.0 * D3DX_PI);
-                let v = y2 / -h;
-
-                // Save texture coordinates.
-
-                vertices[i].tex0.x = u;
-                vertices[i].tex0.y = v;
-            }
-
-            HR!(ID3DXBaseMesh_UnlockVertexBuffer(temp));
-
-            // Clone back to a hardware mesh.
-            HR!(ID3DXBaseMesh_CloneMesh(temp, D3DXMESH_MANAGED | D3DXMESH_WRITEONLY, elements.as_mut_ptr(),
-                d3d_device.clone(), cylinder));
-
-            ReleaseCOM(temp);
         }
     }
 }

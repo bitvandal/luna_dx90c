@@ -14,7 +14,6 @@ pub struct MeshDemo {
     camera_height: f32,
     view: D3DXMATRIX,
     proj: D3DXMATRIX,
-    decl: IDirect3DVertexDeclaration9,
     num_grid_vertices: u32,
     num_grid_triangles: u32,
     fx: LPD3DXEFFECT,
@@ -63,6 +62,8 @@ impl MeshDemo {
             gfx_stats.add_triangles(num_sphere_tris);
         }
 
+        init_all_vertex_declarations(d3d_device.clone());
+
         let mut mesh_demo = MeshDemo {
             vb,
             ib,
@@ -71,7 +72,6 @@ impl MeshDemo {
             camera_height: 5.0,
             view: unsafe { std::mem::zeroed() },
             proj: unsafe { std::mem::zeroed() },
-            decl: init_all_vertex_declarations(d3d_device.clone()).unwrap(),
             num_grid_vertices,
             num_grid_triangles,
             fx,
@@ -97,7 +97,7 @@ impl MeshDemo {
         ReleaseCOM(self.cylinder);
         ReleaseCOM(self.sphere);
 
-        destroy_all_vertex_declarations(&self.decl);
+        destroy_all_vertex_declarations();
     }
 
     fn check_device_caps() -> bool {
@@ -200,7 +200,7 @@ impl MeshDemo {
                 // declaration we are using.
                 HR!(d3d_device.SetStreamSource(0, &self.vb, 0, std::mem::size_of::<VertexPos>() as u32));
                 HR!(d3d_device.SetIndices(&self.ib));
-                HR!(d3d_device.SetVertexDeclaration(&self.decl));
+                HR!(d3d_device.SetVertexDeclaration(&VERTEX_POS_DECL));
 
                 // Setup the rendering FX
                 HR!(ID3DXEffect_SetTechnique(self.fx, self.h_tech));

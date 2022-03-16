@@ -1,8 +1,8 @@
-use std::slice::from_raw_parts_mut;
 use libc::c_void;
 use windows::{
     Win32::Foundation::*, Win32::Graphics::Direct3D9::*, Win32::System::SystemServices::*,
 };
+use common::mtrl::Mtrl;
 
 use crate::*;
 
@@ -10,13 +10,7 @@ use crate::*;
 const WHITE: D3DXCOLOR = D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
 const BLACK: D3DXCOLOR = D3DXCOLOR { r: 0.0, g: 0.0, b: 0.0, a: 1.0 };
 
-// Material
-struct Mtrl {
-    pub ambient: D3DXCOLOR,
-    pub diffuse: D3DXCOLOR,
-    pub spec: D3DXCOLOR,
-    pub spec_power: f32,
-}
+const BASE_PATH: &str = "luna_27_stencil_shadow_demo/";
 
 // Sample demo
 pub struct StencilShadowDemo {
@@ -107,16 +101,20 @@ impl StencilShadowDemo {
         let mut mirror_tex: *mut c_void = std::ptr::null_mut();
         let mut teapot_tex: *mut c_void = std::ptr::null_mut();
 
-        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_27_stencil_shadow_demo/checkboard.dds\0".as_ptr() as _), &mut floor_tex));
-        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_27_stencil_shadow_demo/brick2.dds\0".as_ptr() as _), &mut wall_tex));
-        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_27_stencil_shadow_demo/ice.dds\0".as_ptr() as _), &mut mirror_tex));
-        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_27_stencil_shadow_demo/brick1.dds\0".as_ptr() as _), &mut teapot_tex));
+        HR!(D3DXCreateTextureFromFile(d3d_device.clone(),
+            PSTR(c_resource_path(BASE_PATH, "checkboard.dds").as_str().as_ptr() as _), &mut floor_tex));
+        HR!(D3DXCreateTextureFromFile(d3d_device.clone(),
+            PSTR(c_resource_path(BASE_PATH, "brick2.dds").as_str().as_ptr() as _), &mut wall_tex));
+        HR!(D3DXCreateTextureFromFile(d3d_device.clone(),
+            PSTR(c_resource_path(BASE_PATH, "ice.dds").as_str().as_ptr() as _), &mut mirror_tex));
+        HR!(D3DXCreateTextureFromFile(d3d_device.clone(),
+            PSTR(c_resource_path(BASE_PATH, "brick1.dds").as_str().as_ptr() as _), &mut teapot_tex));
 
         let mut teapot: LPD3DXMESH = std::ptr::null_mut();
         HR!(D3DXCreateTeapot(d3d_device.clone(), &mut teapot, std::ptr::null_mut()));
 
         // Generate texture coordinates for the teapot.
-        StencilShadowDemo::gen_spherical_tex_coords(d3d_device.clone(), &mut teapot);
+        gen_spherical_tex_coords(d3d_device.clone(), &mut teapot);
 
         // Room geometry count.
         if let Some(gfx_stats) = &mut gfx_stats {
@@ -387,9 +385,10 @@ impl StencilShadowDemo {
         let mut fx: LPD3DXEFFECT = std::ptr::null_mut();
         let mut errors: LPD3DXBUFFER = std::ptr::null_mut();
 
-        HR!(D3DXCreateEffectFromFile(d3d_device, PSTR(b"luna_27_stencil_shadow_demo/dirLightTex.fx\0".as_ptr() as _),
-        std::ptr::null(), std::ptr::null(), D3DXSHADER_DEBUG,
-        std::ptr::null(), &mut fx, &mut errors));
+        HR!(D3DXCreateEffectFromFile(d3d_device,
+            PSTR(c_resource_path(BASE_PATH, "dirLightTex.fx").as_str().as_ptr() as _),
+            std::ptr::null(), std::ptr::null(), D3DXSHADER_DEBUG,
+            std::ptr::null(), &mut fx, &mut errors));
 
         unsafe {
             if !errors.is_null() {
@@ -421,59 +420,6 @@ impl StencilShadowDemo {
         (fx, h_tech, h_wvp, h_world_inverse_transpose, h_light_vec_w, h_ambient_mtrl,
          h_ambient_light, h_diffuse_mtrl, h_diffuse_light,
          h_specular_mtrl, h_specular_light, h_specular_power, h_eye_pos, h_world, h_tex)
-    }
-
-    fn gen_spherical_tex_coords(d3d_device: IDirect3DDevice9, sphere: &mut LPD3DXMESH) {
-        // D3DXCreate* functions generate vertices with position
-        // and normal data.  But for texturing, we also need
-        // tex-coords.  So clone the mesh to change the vertex
-        // format to a format with tex-coords.
-        let mut elements: [D3DVERTEXELEMENT9; 64] = [D3DVERTEXELEMENT9::default(); 64];
-        let mut num_elements: u32 = 0;
-        unsafe {
-            if let Some(decl) = &VERTEX_PNT_DECL {
-                HR!(decl.GetDeclaration(elements.as_mut_ptr(), &mut num_elements));
-            }
-
-            let mut temp: LPD3DXMESH = std::ptr::null_mut();
-            HR!(ID3DXBaseMesh_CloneMesh(*sphere, D3DXMESH_SYSTEMMEM, elements.as_mut_ptr(),
-                d3d_device.clone(), &mut temp));
-
-            ReleaseCOM(*sphere);
-
-            // Now generate texture coordinates for each vertex.
-            let mut verts: *mut c_void = std::ptr::null_mut();
-            HR!(ID3DXBaseMesh_LockVertexBuffer(temp, 0, &mut verts));
-
-            let num_vertices: usize = ID3DXBaseMesh_GetNumVertices(temp) as usize;
-            let vertices: &mut [VertexPNT] = from_raw_parts_mut(verts as *mut VertexPNT, num_vertices);
-
-            for i in 0..num_vertices {
-                // Convert to spherical coordinates.
-                let p: D3DXVECTOR3 = vertices[i].pos;
-
-                let theta: f32 = p.z.atan2(p.x);
-                let phi: f32 = (p.y / (p.x * p.x + p.y * p.y + p.z * p.z).sqrt()).acos();
-
-                // Phi and theta give the texture coordinates, but are not in
-                // the range [0, 1], so scale them into that range.
-
-                let u: f32 = theta / (2.0 * D3DX_PI);
-                let v: f32 = phi / D3DX_PI;
-
-                // Save texture coordinates.
-                vertices[i].tex0.x = u;
-                vertices[i].tex0.y = v;
-            }
-
-            HR!(ID3DXBaseMesh_UnlockVertexBuffer(temp));
-
-            // Clone back to a hardware mesh.
-            HR!(ID3DXBaseMesh_CloneMesh(temp, D3DXMESH_MANAGED | D3DXMESH_WRITEONLY, elements.as_mut_ptr(),
-                d3d_device.clone(), sphere));
-
-            ReleaseCOM(temp);
-        }
     }
 
     fn build_room_geometry(d3d_device: IDirect3DDevice9) -> IDirect3DVertexBuffer9 {

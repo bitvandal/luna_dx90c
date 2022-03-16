@@ -1,4 +1,4 @@
-use std::slice::from_raw_parts_mut;
+use common::mtrl::Mtrl;
 use libc::c_void;
 use windows::{
     Win32::Foundation::*, Win32::Graphics::Direct3D9::*, Win32::System::SystemServices::*,
@@ -6,14 +6,7 @@ use windows::{
 
 use crate::*;
 
-// Material
-#[repr(C)]
-struct Mtrl {
-    pub ambient: D3DXCOLOR,
-    pub diffuse: D3DXCOLOR,
-    pub spec: D3DXCOLOR,
-    pub spec_power: f32,
-}
+const BASE_PATH: &str = "luna_28_x_file_demo/";
 
 // Directional Light
 #[repr(C)]
@@ -78,16 +71,17 @@ impl XFileDemo {
         };
 
         let (mesh, mtrl, tex) =
-            // XFileDemo::load_x_file("bigship1.x", d3d_device.clone());
-            // XFileDemo::load_x_file("car.x", d3d_device.clone());
-            // XFileDemo::load_x_file("Dwarf.x", d3d_device.clone());
-            XFileDemo::load_x_file("skullocc.x", d3d_device.clone());
+            // load_x_file(BASE_PATH, "bigship1.x", d3d_device.clone());
+            // load_x_file(BASE_PATH, "car.x", d3d_device.clone());
+            // load_x_file(BASE_PATH, "Dwarf.x", d3d_device.clone());
+            load_x_file(BASE_PATH, "skullocc.x", d3d_device.clone());
 
         let mut world = unsafe { std::mem::zeroed() };
         D3DXMatrixIdentity(&mut world);
 
         let mut white_tex = unsafe { std::mem::zeroed() };
-        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(b"luna_28_x_file_demo/whitetex.dds\0".as_ptr() as _), &mut white_tex));
+        HR!(D3DXCreateTextureFromFile(d3d_device.clone(),
+            PSTR(c_resource_path(BASE_PATH, "whitetex.dds").as_str().as_ptr() as _), &mut white_tex));
 
         if let Some(gfx_stats) = &mut gfx_stats {
             gfx_stats.add_vertices(ID3DXBaseMesh_GetNumVertices(mesh));
@@ -333,7 +327,8 @@ impl XFileDemo {
         let mut fx: LPD3DXEFFECT = std::ptr::null_mut();
         let mut errors: LPD3DXBUFFER = std::ptr::null_mut();
 
-        HR!(D3DXCreateEffectFromFile(d3d_device, PSTR(b"luna_28_x_file_demo/PhongDirLtTex.fx\0".as_ptr() as _),
+        HR!(D3DXCreateEffectFromFile(d3d_device,
+            PSTR(c_resource_path(BASE_PATH, "PhongDirLtTex.fx").as_str().as_ptr() as _),
             std::ptr::null(), std::ptr::null(), D3DXSHADER_DEBUG,
             std::ptr::null(), &mut fx, &mut errors));
 
@@ -360,132 +355,4 @@ impl XFileDemo {
 
         (fx, h_tech, h_wvp, h_world_inverse_transpose, h_mtrl, h_light, h_eye_pos, h_world, h_tex)
     }
-
-    fn load_x_file(filename: &str, d3d_device: IDirect3DDevice9) -> (LPD3DXMESH, Vec<Mtrl>, Vec<*mut c_void>) {
-        unsafe {
-            let mut mesh_out: LPD3DXMESH = std::ptr::null_mut();
-            let mut mtrls = Vec::new();
-            let mut texs = Vec::new();
-
-            // Step 1: Load the .x file from file into a system memory mesh.
-
-            let mut mesh_sys: LPD3DXMESH = std::ptr::null_mut();
-            let mut adj_buffer: LPD3DXBUFFER = std::ptr::null_mut();
-            let mut mtrl_buffer: LPD3DXBUFFER = std::ptr::null_mut();
-            let mut num_mtrls: u32 = 0;
-
-            HR!(D3DXLoadMeshFromX(PSTR(build_file_path(filename).as_str().as_ptr() as _),
-                D3DXMESH_SYSTEMMEM, d3d_device.clone(), &mut adj_buffer, &mut mtrl_buffer, std::ptr::null_mut(),
-                &mut num_mtrls, &mut mesh_sys));
-
-            // Step 2: Find out if the mesh already has normal info?
-
-            let mut elems: [D3DVERTEXELEMENT9; 64] = [D3DVERTEXELEMENT9::default(); 64];
-            HR!(ID3DXBaseMesh_GetDeclaration(mesh_sys, elems.as_mut_ptr()));
-
-            let mut has_normals = false;
-
-            for i in 0..=64 {
-                // Did we reach D3DDECL_END() {0xFF,0,D3DDECLTYPE_UNUSED, 0,0,0}?
-                if elems[i].Stream == 0xff {
-                    break;
-                }
-
-                if elems[i].Type == D3DDECLTYPE_FLOAT3.0 as u8 &&
-                    elems[i].Usage == D3DDECLUSAGE_NORMAL.0 as u8 &&
-                    elems[i].UsageIndex == 0 {
-                    has_normals = true;
-                    break;
-                }
-            }
-
-            // Step 3: Change vertex format to VertexPNT.
-
-            let mut elements: [D3DVERTEXELEMENT9; 64] = [D3DVERTEXELEMENT9::default(); 64];
-            let mut num_elements: u32 = 0;
-
-            if let Some(decl) = &VERTEX_PNT_DECL {
-                HR!(decl.GetDeclaration(elements.as_mut_ptr(), &mut num_elements));
-
-                let mut temp: LPD3DXMESH = std::ptr::null_mut();
-                HR!(ID3DXBaseMesh_CloneMesh(*&mesh_sys, D3DXMESH_SYSTEMMEM, elements.as_ptr(),
-                        d3d_device.clone(), &mut temp));
-
-                ReleaseCOM(*&mesh_sys);
-
-                mesh_sys = temp;
-            }
-
-            // Step 4: If the mesh did not have normals, generate them.
-
-            if has_normals == false {
-                HR!(D3DXComputeNormals(mesh_sys, std::ptr::null()));
-            }
-
-            // Step 5: Optimize the mesh.
-
-            let buf_pointer: *mut u32 = ID3DXBuffer_GetBufferPointer(adj_buffer).cast();
-
-            HR!(ID3DXMesh_Optimize(*&mesh_sys,
-                D3DXMESH_MANAGED | D3DXMESHOPT_COMPACT | D3DXMESHOPT_ATTRSORT | D3DXMESHOPT_VERTEXCACHE,
-                buf_pointer,
-                std::ptr::null_mut(),
-                std::ptr::null_mut(),
-                std::ptr::null_mut(),
-                &mut mesh_out));
-
-            ReleaseCOM(mesh_sys);   // Done w/ system mesh.
-            ReleaseCOM(adj_buffer); // Done with buffer.
-
-            // Step 6: Extract the materials and load the textures.
-
-            if mtrl_buffer != std::ptr::null_mut() && num_mtrls != 0 {
-                let d3dxmtrls_ptr: *mut D3DXMATERIAL = ID3DXBuffer_GetBufferPointer(mtrl_buffer).cast();
-
-                let d3dxmtrls: &mut [D3DXMATERIAL] = from_raw_parts_mut(d3dxmtrls_ptr, num_mtrls as usize);
-
-                for i in 0..num_mtrls {
-                    // Save the ith material.  Note that the MatD3D property does not have an ambient
-                    // value set when its loaded, so just set it to the diffuse value.
-
-                    let index = i as usize;
-                    let m: Mtrl = Mtrl {
-                        ambient: d3dxmtrls[index].MatD3D.Diffuse.into(),
-                        diffuse: d3dxmtrls[index].MatD3D.Diffuse.into(),
-                        spec: d3dxmtrls[index].MatD3D.Specular.into(),
-                        spec_power: d3dxmtrls[index].MatD3D.Power,
-                    };
-                    mtrls.push(m);
-
-                    // Check if the ith material has an associative texture
-                    if !d3dxmtrls[index].pTextureFilename.is_null() {
-                        // Yes, load the texture for the ith subset
-                        let mut tex: *mut c_void = std::ptr::null_mut();
-
-                        let c_str: &CStr = CStr::from_ptr(d3dxmtrls[index].pTextureFilename.0.cast());
-                        let str_slice: &str = c_str.to_str().unwrap_or("<unknown error>");
-                        let mut tex_fn = build_file_path(str_slice);
-
-                        HR!(D3DXCreateTextureFromFile(d3d_device.clone(), PSTR(tex_fn.as_mut_ptr()), &mut tex));
-
-                        texs.push(tex);
-                    } else {
-                        // No texture for the ith subset
-                        texs.push(std::ptr::null_mut());
-                    }
-                }
-            }
-
-            ReleaseCOM(mtrl_buffer); // done w/ buffer
-
-            (mesh_out, mtrls, texs)
-        }
-    }
-}
-
-fn build_file_path(filename: &str) -> String {
-    let mut filepath = String::from("luna_28_x_file_demo/");
-    filepath.push_str(filename);
-    filepath.push_str("\0");
-    filepath
 }

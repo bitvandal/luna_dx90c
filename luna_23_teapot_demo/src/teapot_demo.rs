@@ -1,18 +1,10 @@
-use std::slice::from_raw_parts_mut;
 use libc::c_void;
 use windows::{
     Win32::Foundation::*, Win32::Graphics::Direct3D9::*, Win32::System::SystemServices::*,
 };
+use common::mtrl::Mtrl;
 
 use crate::*;
-
-// Material
-struct Mtrl {
-    pub ambient: D3DXCOLOR,
-    pub diffuse: D3DXCOLOR,
-    pub spec: D3DXCOLOR,
-    pub spec_power: f32,
-}
 
 // Sample demo
 pub struct TeapotDemo {
@@ -107,7 +99,7 @@ impl TeapotDemo {
         HR!(D3DXCreateTeapot(d3d_device.clone(), &mut teapot, std::ptr::null_mut()));
 
         // Generate texture coordinates for the teapot.
-        TeapotDemo::gen_spherical_tex_coords(d3d_device.clone(), &mut teapot);
+        gen_spherical_tex_coords(d3d_device.clone(), &mut teapot);
 
         if let Some(gfx_stats) = &mut gfx_stats {
             gfx_stats.add_vertices(24);
@@ -560,59 +552,6 @@ impl TeapotDemo {
                 // Disable alpha blending.
                 HR!(d3d_device.SetRenderState(D3DRS_ALPHABLENDENABLE, 0));
             }
-        }
-    }
-
-    fn gen_spherical_tex_coords(d3d_device: IDirect3DDevice9, sphere: &mut LPD3DXMESH) {
-        // D3DXCreate* functions generate vertices with position
-        // and normal data.  But for texturing, we also need
-        // tex-coords.  So clone the mesh to change the vertex
-        // format to a format with tex-coords.
-        let mut elements: [D3DVERTEXELEMENT9; 64] = [D3DVERTEXELEMENT9::default(); 64];
-        let mut num_elements: u32 = 0;
-        unsafe {
-            if let Some(decl) = &VERTEX_PNT_DECL {
-                HR!(decl.GetDeclaration(elements.as_mut_ptr(), &mut num_elements));
-            }
-
-            let mut temp: LPD3DXMESH = std::ptr::null_mut();
-            HR!(ID3DXBaseMesh_CloneMesh(*sphere, D3DXMESH_SYSTEMMEM, elements.as_mut_ptr(),
-                d3d_device.clone(), &mut temp));
-
-            ReleaseCOM(*sphere);
-
-            // Now generate texture coordinates for each vertex.
-            let mut verts: *mut c_void = std::ptr::null_mut();
-            HR!(ID3DXBaseMesh_LockVertexBuffer(temp, 0, &mut verts));
-
-            let num_vertices: usize = ID3DXBaseMesh_GetNumVertices(temp) as usize;
-            let vertices: &mut [VertexPNT] = from_raw_parts_mut(verts as *mut VertexPNT, num_vertices);
-
-            for i in 0..num_vertices {
-                // Convert to spherical coordinates.
-                let p: D3DXVECTOR3 = vertices[i].pos;
-
-                let theta: f32 = p.z.atan2(p.x);
-                let phi: f32 = (p.y / (p.x * p.x + p.y * p.y + p.z * p.z).sqrt()).acos();
-
-                // Phi and theta give the texture coordinates, but are not in
-                // the range [0, 1], so scale them into that range.
-
-                let u: f32 = theta / (2.0 * D3DX_PI);
-                let v: f32 = phi / D3DX_PI;
-
-                // Save texture coordinates.
-                vertices[i].tex0.x = u;
-                vertices[i].tex0.y = v;
-            }
-
-            HR!(ID3DXBaseMesh_UnlockVertexBuffer(temp));
-
-            // Clone back to a hardware mesh.
-            HR!(ID3DXBaseMesh_CloneMesh(temp, D3DXMESH_MANAGED | D3DXMESH_WRITEONLY, elements.as_mut_ptr(),
-                d3d_device.clone(), sphere));
-
-            ReleaseCOM(temp);
         }
     }
 }
