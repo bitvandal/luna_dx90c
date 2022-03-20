@@ -45,6 +45,7 @@ pub type D3DXMATRIX = D3DMATRIX;
 
 pub type LPD3DXVECTOR3 = *mut c_void;
 
+#[derive(Clone)]
 #[repr(C)]
 pub struct D3DXVECTOR2 {
     pub x: f32,
@@ -136,6 +137,7 @@ pub type LPD3DXMESH = *mut c_void;
 pub const MAX_FVF_DECL_SIZE: u32 = MAXD3DDECLLENGTH + 1;
 
 // enum D3DXMESH
+pub const D3DXMESH_32BIT: u32 = 0x001;
 pub const D3DXMESH_SYSTEMMEM: u32 = 0x110;
 pub const D3DXMESH_MANAGED: u32 = 0x220;
 pub const D3DXMESH_WRITEONLY: u32 = 0x440;

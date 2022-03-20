@@ -16,6 +16,7 @@ pub struct VertexPN {
     pub normal: D3DXVECTOR3,
 }
 
+#[derive(Clone)]
 pub struct VertexPNT {
     pub pos: D3DXVECTOR3,
     pub normal: D3DXVECTOR3,
