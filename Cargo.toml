@@ -32,5 +32,7 @@ members = [
     "luna_28_x_file_demo",
     "luna_29_bounding_box_demo",
     "luna_30_robot_arm_demo",
-    "luna_31_solar_system_demo"
+    "luna_31_solar_system_demo",
+    #"luna_32_skinned_mesh_demo",
+    "luna_33_basic_terrain_demo"
 ]

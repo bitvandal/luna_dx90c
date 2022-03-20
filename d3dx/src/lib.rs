@@ -133,6 +133,7 @@ pub const D3DXSHADER_USE_LEGACY_D3DX9_31_DLL: u32 = 1 << 16;
 
 // D3DX Mesh
 pub type LPD3DXMESH = *mut c_void;
+pub const MAX_FVF_DECL_SIZE: u32 = MAXD3DDECLLENGTH + 1;
 
 // enum D3DXMESH
 pub const D3DXMESH_SYSTEMMEM: u32 = 0x110;
@@ -298,14 +299,35 @@ extern {
     // HRESULT UnlockVertexBuffer()
     fn D3DX_ID3DXBaseMesh_UnlockVertexBuffer(pMesh: *const c_void) -> D3DX_HRESULT;
 
+    // HRESULT LockIndexBuffer(DWORD Flags, LPVOID *ppData)
+    fn D3DX_ID3DXBaseMesh_LockIndexBuffer(pMesh: *const c_void, Flags: u32, ppData: &mut *mut c_void) -> D3DX_HRESULT;
+
+    // HRESULT UnlockIndexBuffer()
+    fn D3DX_ID3DXBaseMesh_UnlockIndexBuffer(pMesh: *const c_void) -> D3DX_HRESULT;
+
     // HRESULT GetDeclaration(D3DVERTEXELEMENT9 Declaration);
     fn D3DX_ID3DXBaseMesh_GetDeclaration(pMesh: *const c_void, Declaration: *const D3DVERTEXELEMENT9) -> D3DX_HRESULT;
+
+    // HRESULT GenerateAdjacency(FLOAT Epsilon, DWORD *pAdjacency);
+    fn D3DX_ID3DXBaseMesh_GenerateAdjacency(pMesh: *const c_void, Epsilon: f32, pAdjacency: *mut u32) -> D3DX_HRESULT;
 
     // HRESULT Optimize(DWORD Flags, const DWORD *pAdjacencyIn, DWORD *pAdjacencyOut, DWORD *pFaceRemap,
     //                  LPD3DXBUFFER *ppVertexRemap, LPD3DXMESH *ppOptMesh);
     fn D3DX_ID3DXMesh_Optimize(pMesh: *const c_void, Flags: u32, pAdjacencyIn: *const u32,
                           pAdjacencyOut: *const u32, pFaceRemap: *const u32,
                           ppVertexRemap: *mut LPD3DXBUFFER, ppOptMesh: *mut LPD3DXMESH) -> D3DX_HRESULT;
+
+    // HRESULT OptimizeInplace(DWORD Flags, const DWORD *pAdjacencyIn, DWORD *pAdjacencyOut,
+    //                         DWORD *pFaceRemap, LPD3DXBUFFER *ppVertexRemap);
+    fn D3DX_ID3DXMesh_OptimizeInPlace(pMesh: *const c_void, Flags: u32, pAdjacencyIn: *const u32,
+                               pAdjacencyOut: *const u32, pFaceRemap: *const u32,
+                               ppVertexRemap: *mut LPD3DXBUFFER) -> D3DX_HRESULT;
+
+    // HRESULT LockAttributeBuffer(DWORD Flags, DWORD **ppData);
+    fn D3DX_ID3DXMesh_LockAttributeBuffer(pMesh: *const c_void, Flags: u32, ppData: *mut *mut u32) -> D3DX_HRESULT;
+
+    // HRESULT UnlockAttributeBuffer();
+    fn D3DX_ID3DXMesh_UnlockAttributeBuffer(pMesh: *const c_void) -> D3DX_HRESULT;
 
     // HRESULT D3DXLoadMeshFromX(LPCTSTR pFilename, DWORD Options, LPDIRECT3DDEVICE9 pD3DDevice,
     //      LPD3DXBUFFER *ppAdjacency, LPD3DXBUFFER *ppMaterials, LPD3DXBUFFER *ppEffectInstances,
@@ -322,6 +344,12 @@ extern {
 
     // HRESULT D3DXComputeNormals(LPD3DXBASEMESH pMesh, const DWORD *pAdjacency);
     fn D3DX_ComputeNormals(pMesh: LPD3DXMESH, pAdjacency: *const u32) -> D3DX_HRESULT;
+
+    // HRESULT D3DXCreateMesh(DWORD NumFaces, DWORD NumVertices, DWORD Options,
+    //                        const D3DVERTEXELEMENT9 *pDeclaration, LPDIRECT3DDEVICE9 pD3DDevice,
+    //                        LPD3DXMESH *ppMesh);
+    fn D3DX_CreateMesh(NumFaces: u32, NumVertices: u32, Options: u32, pDeclaration: *const D3DVERTEXELEMENT9,
+                       pD3DDevice: IDirect3DDevice9, ppMesh: *mut LPD3DXMESH) -> D3DX_HRESULT;
 
     // MATH
 
@@ -635,8 +663,23 @@ pub fn ID3DXBaseMesh_UnlockVertexBuffer(pMesh: *const c_void) -> Result<()> {
 }
 
 #[allow(non_snake_case)]
+pub fn ID3DXBaseMesh_LockIndexBuffer(pMesh: *const c_void, Flags: u32, ppData: &mut *mut c_void) -> Result<()> {
+    unsafe { to_result(D3DX_ID3DXBaseMesh_LockIndexBuffer(pMesh, Flags, ppData)) }
+}
+
+#[allow(non_snake_case)]
+pub fn ID3DXBaseMesh_UnlockIndexBuffer(pMesh: *const c_void) -> Result<()> {
+    unsafe { to_result(D3DX_ID3DXBaseMesh_UnlockIndexBuffer(pMesh)) }
+}
+
+#[allow(non_snake_case)]
 pub fn ID3DXBaseMesh_GetDeclaration(pMesh: *const c_void, Declaration: *const D3DVERTEXELEMENT9) -> Result<()> {
     unsafe { to_result(D3DX_ID3DXBaseMesh_GetDeclaration(pMesh, Declaration)) }
+}
+
+#[allow(non_snake_case)]
+pub fn ID3DXBaseMesh_GenerateAdjacency(pMesh: *const c_void, Epsilon: f32, pAdjacency: *mut u32) -> Result<()> {
+    unsafe { to_result(D3DX_ID3DXBaseMesh_GenerateAdjacency(pMesh, Epsilon, pAdjacency)) }
 }
 
 #[allow(non_snake_case)]
@@ -645,6 +688,24 @@ pub fn ID3DXMesh_Optimize(pMesh: *const c_void, Flags: u32, pAdjacencyIn: *const
                           ppVertexRemap: *mut LPD3DXBUFFER, ppOptMesh: *mut LPD3DXMESH) -> Result<()> {
     unsafe { to_result(D3DX_ID3DXMesh_Optimize(pMesh, Flags, pAdjacencyIn, pAdjacencyOut,
                                                     pFaceRemap, ppVertexRemap, ppOptMesh)) }
+}
+
+#[allow(non_snake_case)]
+pub fn ID3DXMesh_OptimizeInPlace(pMesh: *const c_void, Flags: u32, pAdjacencyIn: *const u32,
+                          pAdjacencyOut: *const u32, pFaceRemap: *const u32,
+                          ppVertexRemap: *mut LPD3DXBUFFER) -> Result<()> {
+    unsafe { to_result(D3DX_ID3DXMesh_OptimizeInPlace(pMesh, Flags, pAdjacencyIn, pAdjacencyOut,
+                                                           pFaceRemap, ppVertexRemap)) }
+}
+
+#[allow(non_snake_case)]
+pub fn ID3DXMesh_LockAttributeBuffer(pMesh: *const c_void, Flags: u32, ppData: *mut *mut u32) -> Result<()> {
+    unsafe { to_result(D3DX_ID3DXMesh_LockAttributeBuffer(pMesh, Flags, ppData)) }
+}
+
+#[allow(non_snake_case)]
+pub fn ID3DXMesh_UnlockAttributeBuffer(pMesh: *const c_void) -> Result<()> {
+    unsafe { to_result(D3DX_ID3DXMesh_UnlockAttributeBuffer(pMesh)) }
 }
 
 #[allow(non_snake_case)]
@@ -666,6 +727,12 @@ pub fn D3DXComputeBoundingBox(pFirstPosition: *const D3DXVECTOR3, NumVertices: u
 #[allow(non_snake_case)]
 pub fn D3DXComputeNormals(pMesh: LPD3DXMESH, pAdjacency: *const u32) -> Result<()> {
     unsafe { to_result(D3DX_ComputeNormals(pMesh, pAdjacency)) }
+}
+
+#[allow(non_snake_case)]
+pub fn D3DXCreateMesh(NumFaces: u32, NumVertices: u32, Options: u32, pDeclaration: *const D3DVERTEXELEMENT9,
+                      pD3DDevice: IDirect3DDevice9, ppMesh: *mut LPD3DXMESH) -> Result<()> {
+    unsafe { to_result(D3DX_CreateMesh(NumFaces, NumVertices, Options, pDeclaration, pD3DDevice, ppMesh)) }
 }
 
 #[allow(non_snake_case)]

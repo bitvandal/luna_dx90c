@@ -190,14 +190,39 @@ extern "C" HRESULT D3DX_ID3DXBaseMesh_UnlockVertexBuffer(LPD3DXMESH self) {
     return self->UnlockVertexBuffer();
 }
 
+extern "C" HRESULT D3DX_ID3DXBaseMesh_LockIndexBuffer(LPD3DXMESH self, DWORD Flags, LPVOID *ppData) {
+    return self->LockIndexBuffer(Flags, ppData);
+}
+
+extern "C" HRESULT D3DX_ID3DXBaseMesh_UnlockIndexBuffer(LPD3DXMESH self) {
+    return self->UnlockIndexBuffer();
+}
+
 extern "C" HRESULT D3DX_ID3DXBaseMesh_GetDeclaration(LPD3DXMESH self, D3DVERTEXELEMENT9 *Declaration) {
     return self->GetDeclaration(Declaration);
+}
+
+extern "C" HRESULT D3DX_ID3DXBaseMesh_GenerateAdjacency(LPD3DXMESH self, FLOAT Epsilon, DWORD *pAdjacency) {
+    return self->GenerateAdjacency(Epsilon, pAdjacency);
 }
 
 extern "C" HRESULT D3DX_ID3DXMesh_Optimize(LPD3DXMESH self, DWORD Flags, const DWORD *pAdjacencyIn,
                                            DWORD *pAdjacencyOut, DWORD *pFaceRemap, LPD3DXBUFFER *ppVertexRemap,
                                            LPD3DXMESH *ppOptMesh) {
     return self->Optimize(Flags, pAdjacencyIn, pAdjacencyOut, pFaceRemap, ppVertexRemap, ppOptMesh);
+}
+
+extern "C" HRESULT D3DX_ID3DXMesh_OptimizeInPlace(LPD3DXMESH self, DWORD Flags, const DWORD *pAdjacencyIn,
+                                                  DWORD *pAdjacencyOut, DWORD *pFaceRemap, LPD3DXBUFFER *ppVertexRemap) {
+    return self->OptimizeInplace(Flags, pAdjacencyIn, pAdjacencyOut, pFaceRemap, ppVertexRemap);
+}
+
+extern "C" HRESULT D3DX_ID3DXMesh_LockAttributeBuffer(LPD3DXMESH self, DWORD Flags, DWORD **ppData) {
+    return self->LockAttributeBuffer(Flags, ppData);
+}
+
+extern "C" HRESULT D3DX_ID3DXMesh_UnlockAttributeBuffer(LPD3DXMESH self) {
+    return self->UnlockAttributeBuffer();
 }
 
 extern "C" HRESULT D3DX_LoadMeshFromX(LPCTSTR pFilename, DWORD Options, LPDIRECT3DDEVICE9 pD3DDevice,
@@ -214,6 +239,12 @@ extern "C" HRESULT D3DX_ComputeBoundingBox(const D3DXVECTOR3 *pFirstPosition, DW
 
 extern "C" HRESULT D3DX_ComputeNormals(LPD3DXBASEMESH pMesh, const DWORD *pAdjacency) {
     return D3DXComputeNormals(pMesh, pAdjacency);
+}
+
+extern "C" HRESULT D3DX_CreateMesh(DWORD NumFaces, DWORD NumVertices, DWORD Options,
+                                   const D3DVERTEXELEMENT9 *pDeclaration, LPDIRECT3DDEVICE9 pD3DDevice,
+                                   LPD3DXMESH *ppMesh) {
+    return D3DXCreateMesh(NumFaces, NumVertices, Options, pDeclaration, pD3DDevice, ppMesh);
 }
 
 // MATH
