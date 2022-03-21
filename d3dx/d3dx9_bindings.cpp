@@ -293,6 +293,10 @@ extern "C" D3DXMATRIX* D3DX_MatrixRotationZ(D3DXMATRIX *pOut, FLOAT Angle) {
     return D3DXMatrixRotationZ(pOut, Angle);
 }
 
+extern "C" D3DXMATRIX* D3DX_MatrixRotationAxis(D3DXMATRIX *pOut, const D3DXVECTOR3 *pV, FLOAT Angle) {
+    return D3DXMatrixRotationAxis(pOut, pV, Angle);
+}
+
 extern "C" D3DXMATRIX* D3DX_MatrixIdentity(D3DXMATRIX *pOut) {
     return D3DXMatrixIdentity(pOut);
 }
@@ -331,4 +335,12 @@ extern "C" D3DXVECTOR3* D3DX_Vec3Maximize(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *
 
 extern "C" D3DXVECTOR3* D3DX_Vec3Minimize(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV1, const D3DXVECTOR3 *pV2) {
     return D3DXVec3Minimize(pOut, pV1, pV2);
+}
+
+extern "C" D3DXVECTOR3* D3DX_Vec3Cross(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV1, const D3DXVECTOR3 *pV2) {
+    return D3DXVec3Cross(pOut, pV1, pV2);
+}
+
+extern "C" FLOAT D3DX_Vec3Dot(const D3DXVECTOR3 *pV1, const D3DXVECTOR3 *pV2) {
+    return D3DXVec3Dot(pV1, pV2);
 }

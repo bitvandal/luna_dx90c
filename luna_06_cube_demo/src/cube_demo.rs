@@ -176,7 +176,6 @@ impl CubeDemo {
         let w: f32 = (unsafe { *self.d3d_pp }).BackBufferWidth as f32;
         let h: f32 = (unsafe { *self.d3d_pp }).BackBufferHeight as f32;
         D3DXMatrixPerspectiveFovLH(&mut self.proj, D3DX_PI * 0.25, w/h, 1.0, 5000.0);
-        unsafe { dbg!(self.proj.Anonymous.m); }
     }
 }
 

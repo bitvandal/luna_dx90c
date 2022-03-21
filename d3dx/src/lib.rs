@@ -389,6 +389,9 @@ extern {
     // D3DXMATRIX* D3DXMatrixRotationZ(D3DXMATRIX *pOut, FLOAT Angle)
     fn D3DX_MatrixRotationZ(pOut: *mut D3DXMATRIX, Angle: f32) -> *mut D3DXMATRIX;
 
+    // D3DXMATRIX* D3DXMatrixRotationAxis(D3DXMATRIX *pOut, const D3DXVECTOR3 *pV, FLOAT Angle);
+    fn D3DX_MatrixRotationAxis(pOut: *mut D3DXMATRIX, pV: *const D3DXVECTOR3, Angle: f32) -> *mut D3DXMATRIX;
+
     // D3DXMATRIX* D3DXMatrixIdentity(D3DXMATRIX *pOut)
     fn D3DX_MatrixIdentity(pOut: *mut D3DXMATRIX) -> *mut D3DXMATRIX;
 
@@ -418,6 +421,12 @@ extern {
 
     // D3DXVECTOR3* D3DXVec3Maximize(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV1, const D3DXVECTOR3 *pV2)
     fn D3DX_Vec3Minimize(pOut: *mut D3DXVECTOR3, pV1: *const D3DXVECTOR3, pV2: *const D3DXVECTOR3) -> *mut D3DXVECTOR3;
+
+    // D3DXVECTOR3* D3DXVec3Cross(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV1, const D3DXVECTOR3 *pV2)
+    fn D3DX_Vec3Cross(pOut: *mut D3DXVECTOR3, pV1: *const D3DXVECTOR3, pV2: *const D3DXVECTOR3) -> *mut D3DXVECTOR3;
+
+    // FLOAT D3DXVec3Dot(const D3DXVECTOR3 *pV1, const D3DXVECTOR3 *pV2)
+    fn D3DX_Vec3Dot(pV1: *const D3DXVECTOR3, pV2: *const D3DXVECTOR3) -> f32;
 }
 
 fn to_result(code: D3DX_HRESULT) -> Result<()> {
@@ -790,6 +799,11 @@ pub fn D3DXMatrixRotationZ(pOut: *mut D3DXMATRIX, Angle: f32) -> *mut D3DXMATRIX
 }
 
 #[allow(non_snake_case)]
+pub fn D3DXMatrixRotationAxis(pOut: *mut D3DXMATRIX, pV: *const D3DXVECTOR3, Angle: f32) -> *mut D3DXMATRIX {
+    unsafe { D3DX_MatrixRotationAxis(pOut, pV, Angle) }
+}
+
+#[allow(non_snake_case)]
 pub fn D3DXMatrixIdentity(pOut: *mut D3DXMATRIX) -> *mut D3DXMATRIX {
     unsafe { D3DX_MatrixIdentity(pOut) }
 }
@@ -839,4 +853,14 @@ pub fn D3DXVec3Maximize(pOut: *mut D3DXVECTOR3, pV1: *const D3DXVECTOR3, pV2: *c
 #[allow(non_snake_case)]
 pub fn D3DXVec3Minimize(pOut: *mut D3DXVECTOR3, pV1: *const D3DXVECTOR3, pV2: *const D3DXVECTOR3) -> *mut D3DXVECTOR3 {
     unsafe { D3DX_Vec3Minimize(pOut, pV1, pV2) }
+}
+
+#[allow(non_snake_case)]
+pub fn D3DXVec3Cross(pOut: *mut D3DXVECTOR3, pV1: *const D3DXVECTOR3, pV2: *const D3DXVECTOR3) -> *mut D3DXVECTOR3 {
+    unsafe { D3DX_Vec3Cross(pOut, pV1, pV2) }
+}
+
+#[allow(non_snake_case)]
+pub fn D3DXVec3Dot(pV1: *const D3DXVECTOR3, pV2: *const D3DXVECTOR3) -> f32 {
+    unsafe { D3DX_Vec3Dot(pV1, pV2) }
 }

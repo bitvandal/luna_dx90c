@@ -35,5 +35,6 @@ members = [
     "luna_31_solar_system_demo",
     #"luna_32_skinned_mesh_demo",
     "luna_33_basic_terrain_demo",
-    "luna_34_terrain_demo"
+    "luna_34_terrain_demo",
+    "luna_35_camera_demo"
 ]
