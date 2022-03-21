@@ -37,5 +37,6 @@ members = [
     "luna_33_basic_terrain_demo",
     "luna_34_terrain_demo",
     "luna_35_camera_demo",
-    "luna_36_walk_terrain_demo"
+    "luna_36_walk_terrain_demo",
+    "luna_37_culling_demo"
 ]

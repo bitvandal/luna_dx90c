@@ -261,6 +261,18 @@ extern "C" D3DXVECTOR3* D3DX_Vec3Subtract(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *
     return D3DXVec3Subtract(pOut, pV1, pV2);
 }
 
+extern "C" FLOAT D3DX_Vec3LengthSq(const D3DXVECTOR3 *pV) {
+    return D3DXVec3LengthSq(pV);
+}
+
+extern "C" D3DXVECTOR4* D3DX_Vec4Add(D3DXVECTOR4 *pOut, const D3DXVECTOR4 *pV1, const D3DXVECTOR4 *pV2) {
+    return D3DXVec4Add(pOut, pV1, pV2);
+}
+
+extern "C" D3DXVECTOR4* D3DX_Vec4Subtract(D3DXVECTOR4 *pOut, const D3DXVECTOR4 *pV1, const D3DXVECTOR4 *pV2) {
+    return D3DXVec4Subtract(pOut, pV1, pV2);
+}
+
 extern "C" D3DXMATRIX* D3DX_MatrixLookAtLH(D3DXMATRIX *pOut, const D3DXVECTOR3 *pEye, const D3DXVECTOR3 *pAt, const D3DXVECTOR3 *pUp) {
     return D3DXMatrixLookAtLH(pOut, pEye, pAt, pUp);
 }
@@ -315,6 +327,14 @@ extern "C" D3DXMATRIX* D3DX_MatrixReflect(D3DXMATRIX *pOut, const D3DXPLANE *pPl
 
 extern "C" D3DXMATRIX* D3DX_MatrixShadow(D3DXMATRIX *pOut, const D3DXVECTOR4 *pLight, const D3DXPLANE *pPlane) {
     return D3DXMatrixShadow(pOut, pLight, pPlane);
+}
+
+extern "C" FLOAT D3DX_PlaneDotCoord(const D3DXPLANE *pP, const D3DXVECTOR3 *pV) {
+    return D3DXPlaneDotCoord(pP, pV);
+}
+
+extern "C" D3DXPLANE* D3DX_PlaneNormalize(D3DXPLANE *pOut, const D3DXPLANE *pP) {
+    return D3DXPlaneNormalize(pOut, pP);
 }
 
 extern "C" D3DXVECTOR3* D3DX_Vec3TransformCoord(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV, const D3DXMATRIX *pM) {

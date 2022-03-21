@@ -66,6 +66,20 @@ pub struct D3DXVECTOR4 {
     pub w: f32,
 }
 
+impl D3DXVECTOR4 {
+    pub fn add(&self, other: &D3DXVECTOR4) -> D3DXVECTOR4 {
+        let mut res: D3DXVECTOR4 = unsafe { std::mem::zeroed() };
+        D3DXVec4Add(&mut res, self, other);
+        res
+    }
+
+    pub fn sub(&self, other: &D3DXVECTOR4) -> D3DXVECTOR4 {
+        let mut res: D3DXVECTOR4 = unsafe { std::mem::zeroed() };
+        D3DXVec4Subtract(&mut res, self, other);
+        res
+    }
+}
+
 pub const D3DX_PI: f32 = std::f32::consts::PI;
 
 #[repr(C)]
@@ -96,6 +110,7 @@ impl From<D3DCOLORVALUE> for D3DXCOLOR {
 
 // Planes
 
+#[derive(Default, Copy, Clone)]
 #[repr(C)]
 pub struct D3DXPLANE {
     pub a: f32,
@@ -364,6 +379,15 @@ extern {
     // D3DXVECTOR3* D3DXVec3Subtract(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV1, const D3DXVECTOR3 *pV1)
     fn D3DX_Vec3Subtract(pOut: *mut D3DXVECTOR3, pV1: *const D3DXVECTOR3, pV2: *const D3DXVECTOR3) -> *mut D3DXVECTOR3;
 
+    // FLOAT D3DXVec3LengthSq(const D3DXVECTOR3 *pV);
+    fn D3DX_Vec3LengthSq(pV: *const D3DXVECTOR3) -> f32;
+
+    // D3DXVECTOR4* D3DXVec4Add(D3DXVECTOR4 *pOut, const D3DXVECTOR4 *pV1, const D3DXVECTOR4 *pV2);
+    fn D3DX_Vec4Add(pOut: *mut D3DXVECTOR4, pV1: *const D3DXVECTOR4, pV2: *const D3DXVECTOR4) -> *mut D3DXVECTOR4;
+
+    // D3DXVECTOR4* D3DXVec4Subtract(D3DXVECTOR4 *pOut, const D3DXVECTOR4 *pV1, const D3DXVECTOR4 *pV2);
+    fn D3DX_Vec4Subtract(pOut: *mut D3DXVECTOR4, pV1: *const D3DXVECTOR4, pV2: *const D3DXVECTOR4) -> *mut D3DXVECTOR4;
+
     // D3DXMATRIX* D3DXMatrixLookAtLH(D3DXMATRIX *pOut, const D3DXVECTOR3 *pEye, const D3DXVECTOR3 *pAt, const D3DXVECTOR3 *pUp)
     fn D3DX_MatrixLookAtLH(pOut: *mut D3DXMATRIX, pEye: *const D3DXVECTOR3, pAt: *const D3DXVECTOR3,
                            pUp: *const D3DXVECTOR3) -> *mut D3DXMATRIX;
@@ -406,6 +430,12 @@ extern {
 
     // D3DXMATRIX* D3DXMatrixShadow(D3DXMATRIX *pOut, const D3DXVECTOR4 *pLight, const D3DXPLANE *pPlane);
     fn D3DX_MatrixShadow(pOut: *mut D3DXMATRIX, pLight: *const D3DXVECTOR4, pPlane: *const D3DXPLANE) -> *mut D3DXMATRIX;
+
+    // FLOAT D3DXPlaneDotCoord(const D3DXPLANE *pP, const D3DXVECTOR3 *pV);
+    fn D3DX_PlaneDotCoord(pP: *const D3DXPLANE, pV: *const D3DXVECTOR3) -> f32;
+
+    // D3DXPLANE* D3DXPlaneNormalize(D3DXPLANE *pOut, const D3DXPLANE *pP);
+    fn D3DX_PlaneNormalize(pOut: *mut D3DXPLANE, pP: *const D3DXPLANE) -> *mut D3DXPLANE;
 
     // D3DXVECTOR3* D3DXVec3TransformCoord(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV, const D3DXMATRIX *pM)
     fn D3DX_Vec3TransformCoord(pOut: *mut D3DXVECTOR3, pV: *const D3DXVECTOR3, pM: *const D3DXMATRIX) -> *mut D3DXVECTOR3;
@@ -752,6 +782,21 @@ pub fn D3DXVec3Subtract(pOut: *mut D3DXVECTOR3, pV1: *const D3DXVECTOR3, pV2: *c
 }
 
 #[allow(non_snake_case)]
+pub fn D3DXVec3LengthSq(pV: *const D3DXVECTOR3) -> f32 {
+    unsafe { D3DX_Vec3LengthSq(pV) }
+}
+
+#[allow(non_snake_case)]
+fn D3DXVec4Add(pOut: *mut D3DXVECTOR4, pV1: *const D3DXVECTOR4, pV2: *const D3DXVECTOR4) -> *mut D3DXVECTOR4 {
+    unsafe { D3DX_Vec4Add(pOut, pV1, pV2) }
+}
+
+#[allow(non_snake_case)]
+fn D3DXVec4Subtract(pOut: *mut D3DXVECTOR4, pV1: *const D3DXVECTOR4, pV2: *const D3DXVECTOR4) -> *mut D3DXVECTOR4 {
+    unsafe { D3DX_Vec4Subtract(pOut, pV1, pV2) }
+}
+
+#[allow(non_snake_case)]
 pub fn D3DXVec3Scale(pOut: *mut D3DXVECTOR3, pV: *const D3DXVECTOR3, s: f32) -> *mut D3DXVECTOR3 {
     unsafe { D3DX_Vec3Scale(pOut, pV, s) }
 }
@@ -826,6 +871,16 @@ pub fn D3DXMatrixReflect(pOut: *mut D3DXMATRIX, pPlane: *const D3DXPLANE) -> *mu
 #[allow(non_snake_case)]
 pub fn D3DXMatrixShadow(pOut: *mut D3DXMATRIX, pLight: *const D3DXVECTOR4, pPlane: *const D3DXPLANE) -> *mut D3DXMATRIX {
     unsafe { D3DX_MatrixShadow(pOut, pLight, pPlane) }
+}
+
+#[allow(non_snake_case)]
+pub fn D3DXPlaneDotCoord(pP: *const D3DXPLANE, pV: *const D3DXVECTOR3) -> f32 {
+    unsafe { D3DX_PlaneDotCoord(pP, pV) }
+}
+
+#[allow(non_snake_case)]
+pub fn D3DXPlaneNormalize(pOut: *mut D3DXPLANE, pP: *const D3DXPLANE) -> *mut D3DXPLANE {
+    unsafe { D3DX_PlaneNormalize(pOut, pP) }
 }
 
 #[allow(non_snake_case)]
