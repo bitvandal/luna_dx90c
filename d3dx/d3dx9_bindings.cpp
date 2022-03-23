@@ -173,6 +173,10 @@ extern "C" DWORD D3DX_ID3DXBaseMesh_GetNumFaces(LPD3DXMESH self) {
     return self->GetNumFaces();
 }
 
+extern "C" DWORD D3DX_ID3DXBaseMesh_GetNumBytesPerVertex(LPD3DXMESH self) {
+    return self->GetNumBytesPerVertex();
+}
+
 extern "C" HRESULT D3DX_ID3DXBaseMesh_DrawSubset(LPD3DXMESH self, DWORD AttribId) {
     return self->DrawSubset(AttribId);
 }

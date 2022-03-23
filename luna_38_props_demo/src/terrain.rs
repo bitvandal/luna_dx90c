@@ -10,14 +10,23 @@ use crate::{CAMERA, Camera};
 const EPSILON: f32 = 0.001;
 
 mod sub_grid {
+    use common::AABB;
+    use d3dx::LPD3DXMESH;
+
     pub const NUM_ROWS: u32  = 33;
     pub const NUM_COLS: u32  = 33;
     pub const NUM_TRIS: u32  = (NUM_ROWS - 1) * (NUM_COLS - 1) * 2;
     pub const NUM_VERTS: u32 = NUM_ROWS * NUM_COLS;
+
+    #[derive(Clone)]
+    pub struct SubGrid {
+        pub mesh: LPD3DXMESH,
+        pub bounding_box: AABB,
+    }
 }
 
 pub struct Terrain {
-    sub_grid_meshes: Vec<LPD3DXMESH>,
+    sub_grids: Vec<sub_grid::SubGrid>,
 
     width: f32,
     depth: f32,
@@ -68,11 +77,9 @@ impl Terrain {
         HR!(D3DXCreateTextureFromFile(d3d_device.clone(),
             PSTR(c_resource_path(base_path, blend_map_file).as_str().as_ptr() as _), &mut blend_map));
 
-        let mut sub_grid_meshes: Vec<LPD3DXMESH> = Vec::new();
-        let mut sub_grid_bnd_boxes: Vec<AABB> = Vec::new();
-
+        let mut sub_grids: Vec<sub_grid::SubGrid> = Vec::new();
         Terrain::build_geometry(d3d_device.clone(), &heightmap, vert_rows, vert_cols,
-                                width, depth, dx, dz, &mut sub_grid_meshes, &mut sub_grid_bnd_boxes);
+                                width, depth, dx, dz, &mut sub_grids);
 
         let (fx,
             h_tech,
@@ -90,7 +97,7 @@ impl Terrain {
         HR!(ID3DXBaseEffect_SetTexture(fx, h_blend_map, blend_map));
 
         Terrain {
-            sub_grid_meshes,
+            sub_grids,
 
             heightmap,
 
@@ -116,8 +123,8 @@ impl Terrain {
     pub fn release_com_objects(&self) {
         ReleaseCOM(self.fx);
 
-        for i in 0..self.sub_grid_meshes.len() {
-            ReleaseCOM(self.sub_grid_meshes[i]);
+        for sub_grid in &self.sub_grids {
+            ReleaseCOM(sub_grid.mesh);
         }
 
         ReleaseCOM(self.tex0.cast());
@@ -140,21 +147,29 @@ impl Terrain {
     }
 
     pub fn get_num_vertices(&self) -> u32 {
-        if self.sub_grid_meshes.is_empty() {
+        if self.sub_grids.is_empty() {
             0
         } else {
-            let num_vertices: usize = ID3DXBaseMesh_GetNumVertices(self.sub_grid_meshes[0]) as usize;
-            (self.sub_grid_meshes.len() * num_vertices) as u32
+            let num_vertices: usize = ID3DXBaseMesh_GetNumVertices(self.sub_grids[0].mesh) as usize;
+            (self.sub_grids.len() * num_vertices) as u32
         }
     }
 
     pub fn get_num_triangles(&self) -> u32 {
-        if self.sub_grid_meshes.is_empty() {
+        if self.sub_grids.is_empty() {
             0
         } else {
-            let num_faces: usize = ID3DXBaseMesh_GetNumFaces(self.sub_grid_meshes[0]) as usize;
-            (self.sub_grid_meshes.len() * num_faces) as u32
+            let num_faces: usize = ID3DXBaseMesh_GetNumFaces(self.sub_grids[0].mesh) as usize;
+            (self.sub_grids.len() * num_faces) as u32
         }
+    }
+
+    pub fn get_width(&self) -> f32 {
+        self.width
+    }
+
+    pub fn get_depth(&self) -> f32 {
+        self.depth
     }
 
     pub fn get_height(&self, x: f32, z: f32) -> f32 {
@@ -195,6 +210,31 @@ impl Terrain {
     pub fn draw(&self) {
         unsafe {
             let camera: &Camera = &CAMERA.expect("Camera has not been created");
+
+            // Frustum cull sub-grids.
+            let mut visible_sub_grids: Vec<sub_grid::SubGrid> = Vec::new();
+            for sub_grid in &self.sub_grids {
+                if camera.is_visible(&sub_grid.bounding_box) {
+                    visible_sub_grids.push(sub_grid.clone())
+                }
+            }
+
+            // Sort front-to-back from camera.
+            visible_sub_grids.sort_by(|a, b| {
+                // Sort by distance from nearest to farthest from the camera.  In this
+                // way, we draw objects in front to back order to reduce overdraw
+                // (i.e., depth test will prevent them from being processed further.
+                let mut d1: D3DXVECTOR3 = std::mem::zeroed();
+                D3DXVec3Subtract(&mut d1, &a.bounding_box.center(), &camera.get_pos());
+
+                let mut d2: D3DXVECTOR3 = std::mem::zeroed();
+                D3DXVec3Subtract(&mut d2, &b.bounding_box.center(), &camera.get_pos());
+
+                let sqlen_a = D3DXVec3LengthSq(&d1);
+                let sqlen_b = D3DXVec3LengthSq(&d2);
+                sqlen_a.partial_cmp(&sqlen_b).unwrap()
+            });
+
             HR!(ID3DXBaseEffect_SetMatrix(self.fx, self.h_view_proj, camera.get_view_proj()));
 
             HR!(ID3DXEffect_SetTechnique(self.fx, self.h_tech));
@@ -204,8 +244,10 @@ impl Terrain {
 
             HR!(ID3DXEffect_BeginPass(self.fx, 0));
 
-            for i in 0..self.sub_grid_meshes.len() {
-                HR!(ID3DXBaseMesh_DrawSubset(self.sub_grid_meshes[i], 0));
+            // dbg!(visible_sub_grids.len());
+
+            for sub_grid in visible_sub_grids {
+                HR!(ID3DXBaseMesh_DrawSubset(sub_grid.mesh, 0));
             }
 
             HR!(ID3DXEffect_EndPass(self.fx));
@@ -251,8 +293,7 @@ impl Terrain {
     fn build_geometry(d3d_device: IDirect3DDevice9, heightmap: &Heightmap,
                       vert_rows: u32, vert_cols: u32, width: f32, depth: f32,
                       dx: f32, dz: f32,
-                      sub_grid_meshes: &mut Vec<LPD3DXMESH>,
-                      sub_grid_bnd_boxes: &mut Vec<AABB>) {
+                      sub_grids: &mut Vec<sub_grid::SubGrid>) {
         unsafe {
             //===============================================================
             // Create one large mesh for the grid in system memory.
@@ -267,8 +308,11 @@ impl Terrain {
                 HR!(decl.GetDeclaration(elems.as_mut_ptr(), &mut num_elems));
             }
 
+            // Use Scratch pool since we are using this mesh purely for some CPU work,
+            // which will be used to create the sub-grids that the graphics card
+            // will actually draw.
             let mut mesh = std::ptr::null_mut();
-            HR!(D3DXCreateMesh(num_tris as u32, num_verts as u32, D3DXMESH_SYSTEMMEM | D3DXMESH_32BIT,
+            HR!(D3DXCreateMesh(num_tris as u32, num_verts as u32, D3DPOOL_SCRATCH.0 | D3DXMESH_32BIT,
                 elems.as_mut_ptr(), d3d_device.clone(), &mut mesh));
 
             //===============================================================
@@ -342,8 +386,7 @@ impl Terrain {
                     };
 
                     Terrain::build_sub_grid_mesh(d3d_device.clone(), r, vert_cols, dx, dz,
-                                                 v_slice, sub_grid_meshes,
-                                                 sub_grid_bnd_boxes);
+                                                 v_slice, sub_grids);
                 }
             }
 
@@ -354,8 +397,7 @@ impl Terrain {
     }
 
     fn build_sub_grid_mesh(d3d_device: IDirect3DDevice9, r: RECT, vert_cols: u32, dx: f32, dz: f32,
-                           grid_verts: &mut [VertexPNT], sub_grid_meshes: &mut Vec<LPD3DXMESH>,
-                           sub_grid_bnd_boxes: &mut Vec<AABB>) {
+                           grid_verts: &mut [VertexPNT], sub_grids: &mut Vec<sub_grid::SubGrid>) {
         unsafe {
             //===============================================================
             // Get indices for subgrid (we don't use the verts here--the verts
@@ -437,15 +479,20 @@ impl Terrain {
             let sub_mesh_num_faces = ID3DXBaseMesh_GetNumFaces(sub_mesh) * 3;
 
             let mut adj: Vec<u32> = Vec::new();
-            adj.resize(sub_mesh_num_faces as usize, 0);
+            adj.resize(sub_mesh_num_faces as usize * 3, 0);
             HR!(ID3DXBaseMesh_GenerateAdjacency(sub_mesh, EPSILON, adj.as_mut_ptr()));
             HR!(ID3DXMesh_OptimizeInPlace(sub_mesh, D3DXMESHOPT_VERTEXCACHE | D3DXMESHOPT_ATTRSORT,
                 adj.as_ptr(), std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut()));
 
             //===============================================================
             // Save the mesh and bounding box.
-            sub_grid_meshes.push(sub_mesh);
-            sub_grid_bnd_boxes.push(bnd_box.clone());
+
+            let g = sub_grid::SubGrid {
+                mesh: sub_mesh,
+                bounding_box: bnd_box.clone(),
+            };
+
+            sub_grids.push(g);
         }
     }
 }

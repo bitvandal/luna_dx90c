@@ -28,6 +28,14 @@ pub struct VertexPT {
     pub tex0: D3DXVECTOR2,
 }
 
+pub struct VertexGrass {
+    pub pos: D3DXVECTOR3,
+    pub quad_pos: D3DXVECTOR3,
+    pub tex0: D3DXVECTOR2,
+    pub amplitude: f32, // for wind oscillation.
+    pub color_offset: D3DCOLOR,
+}
+
 // Vertex declarations
 
 pub static mut VERTEX_POS_DECL: Option<IDirect3DVertexDeclaration9> = None;
@@ -35,6 +43,7 @@ pub static mut VERTEX_COL_DECL: Option<IDirect3DVertexDeclaration9> = None;
 pub static mut VERTEX_PN_DECL: Option<IDirect3DVertexDeclaration9> = None;
 pub static mut VERTEX_PNT_DECL: Option<IDirect3DVertexDeclaration9> = None;
 pub static mut VERTEX_PT_DECL: Option<IDirect3DVertexDeclaration9> = None;
+pub static mut VERTEX_GRASS: Option<IDirect3DVertexDeclaration9> = None;
 
 pub fn init_all_vertex_declarations(d3d_device: IDirect3DDevice9) {
     unsafe {
@@ -126,7 +135,6 @@ pub fn init_all_vertex_declarations(d3d_device: IDirect3DDevice9) {
 
         VERTEX_PNT_DECL = Some(d3d_device.CreateVertexDeclaration(vertex_pnt_elements.as_ptr()).unwrap());
 
-
         let vertex_pt_elements: [D3DVERTEXELEMENT9; 3] = [
             D3DVERTEXELEMENT9 {
                 Stream: 0,
@@ -148,6 +156,52 @@ pub fn init_all_vertex_declarations(d3d_device: IDirect3DDevice9) {
         ];
 
         VERTEX_PT_DECL = Some(d3d_device.CreateVertexDeclaration(vertex_pt_elements.as_ptr()).unwrap());
+
+        let vertex_grass_elements: [D3DVERTEXELEMENT9; 6] = [
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 0,
+                Type: D3DDECLTYPE_FLOAT3.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_POSITION.0 as u8,
+                UsageIndex: 0
+            },
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 12,
+                Type: D3DDECLTYPE_FLOAT3.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_TEXCOORD.0 as u8,
+                UsageIndex: 0
+            },
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 24,
+                Type: D3DDECLTYPE_FLOAT2.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_TEXCOORD.0 as u8,
+                UsageIndex: 1
+            },
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 32,
+                Type: D3DDECLTYPE_FLOAT1.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_TEXCOORD.0 as u8,
+                UsageIndex: 2
+            },
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 36,
+                Type: D3DDECLTYPE_D3DCOLOR.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_COLOR.0 as u8,
+                UsageIndex: 0
+            },
+            D3DDECL_END!()
+        ];
+
+        VERTEX_GRASS = Some(d3d_device.CreateVertexDeclaration(vertex_grass_elements.as_ptr()).unwrap());
     }
 }
 
@@ -158,4 +212,5 @@ pub fn destroy_all_vertex_declarations() {
     // drop(vertex_pn_decl);
     // drop(vertex_pnt_decl);
     // drop(vertex_pt_decl);
+    // drop(vertex_grass_decl);
 }

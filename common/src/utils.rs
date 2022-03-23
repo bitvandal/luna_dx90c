@@ -53,3 +53,15 @@ pub fn clean_func_call(s: &str) -> String {
     let tmp = Regex::new(r"\s+").unwrap().replace_all(s, " ");
     tmp.chars().filter(|c| *c != '\n' && *c != '\r').collect()
 }
+
+// FIXME quick and dirty adapted way to calculate a random float based on a source rand int
+pub fn get_random_float(base_rand_int: i32, a: f32, b: f32) -> f32 {
+    if a >= b { // bad input
+        return a
+    }
+
+    // Get random float in [0, 1] interval.
+    let f: f32 = (base_rand_int % 10001) as f32 * 0.0001;
+
+    (f * (b - a)) + a
+}

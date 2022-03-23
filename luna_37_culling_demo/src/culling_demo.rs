@@ -140,7 +140,6 @@ impl CullingDemo {
                 dinput.poll();
 
                 if let Some(camera) = &mut CAMERA {
-                    // camera.update(dt, None, 2.5);
                     camera.update(dt, Some(&self.terrain), 2.5);
                 }
             }

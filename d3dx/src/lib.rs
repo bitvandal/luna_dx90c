@@ -302,6 +302,9 @@ extern {
     // DWORD ID3DXBaseMesh::GetNumFaces();
     fn D3DX_ID3DXBaseMesh_GetNumFaces(pMesh: *const c_void) -> u32;
 
+    // DWORD GetNumBytesPerVertex();
+    fn D3DX_ID3DXBaseMesh_GetNumBytesPerVertex(pMesh: *const c_void) -> u32;
+
     // HRESULT ID3DXBaseMesh::DrawSubset(LPD3DXMESH self, DWORD AttribId)
     fn D3DX_ID3DXBaseMesh_DrawSubset(pMesh: *const c_void, AttribId: u32) -> D3DX_HRESULT;
 
@@ -675,6 +678,11 @@ pub fn ID3DXBaseMesh_GetNumVertices(pMesh: *const c_void) -> u32 {
 #[allow(non_snake_case)]
 pub fn ID3DXBaseMesh_GetNumFaces(pMesh: *const c_void) -> u32 {
     unsafe { D3DX_ID3DXBaseMesh_GetNumFaces(pMesh) }
+}
+
+#[allow(non_snake_case)]
+pub fn ID3DXBaseMesh_GetNumBytesPerVertex(pMesh: *const c_void) -> u32 {
+    unsafe { D3DX_ID3DXBaseMesh_GetNumBytesPerVertex(pMesh) }
 }
 
 #[allow(non_snake_case)]
