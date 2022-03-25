@@ -4,26 +4,26 @@ use windows::{
 };
 
 use crate::*;
-use crate::rain_psystem::RainPSystem;
+use crate::sprinkler_psystem::SprinklerPSystem;
 use crate::terrain::Terrain;
 
-pub const BASE_PATH: &str = "luna_40_rain_demo/";
+pub const BASE_PATH: &str = "luna_41_sprinkler_demo/";
 
 // Colors
 pub const WHITE: D3DXCOLOR = D3DXCOLOR { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
 
 // Sample demo
-pub struct RainDemo {
+pub struct SprinklerDemo {
     d3d_pp: *const D3DPRESENT_PARAMETERS,
     gfx_stats: Option<GfxStats>,
 
     terrain: Terrain,
-    psys: RainPSystem,
+    psys: SprinklerPSystem,
 }
 
-impl RainDemo {
-    pub fn new(hwnd: HWND, d3d_device: IDirect3DDevice9, d3d_pp: *const D3DPRESENT_PARAMETERS, rng: ThreadRng) -> Option<RainDemo> {
-        if !RainDemo::check_device_caps() {
+impl SprinklerDemo {
+    pub fn new(hwnd: HWND, d3d_device: IDirect3DDevice9, d3d_pp: *const D3DPRESENT_PARAMETERS, rng: ThreadRng) -> Option<SprinklerDemo> {
+        if !SprinklerDemo::check_device_caps() {
             display_error_then_quit("checkDeviceCaps() Failed");
         }
 
@@ -62,19 +62,22 @@ impl RainDemo {
 
         // Initialize the particle system.
         let mut psys_world = D3DXMATRIX::default();
-        D3DXMatrixIdentity(&mut psys_world);
+        D3DXMatrixTranslation(&mut psys_world,
+                              55.0,
+                              terrain.get_height(55.0, 55.0),
+                              55.0);
 
-        // Rain always visible, so make infinitely huge bounding box
-        // so that it is always seen.
+        // Don't cull, but in practice you'd want to figure out a
+        // bounding box based on the settings of the system.
         let mut psys_box = AABB::default();
         psys_box.max_pt = D3DXVECTOR3 { x: f32::MAX, y: f32::MAX, z: f32::MAX };
         psys_box.min_pt = D3DXVECTOR3 { x: f32::MIN, y: f32::MIN, z: f32::MIN };
 
         // Accelerate due to wind and gravity.
         let mut psys =
-            RainPSystem::new(BASE_PATH, "rain.fx", "RainTech", "raindrop.dds",
-                             &D3DXVECTOR3 { x: -1.0, y: -9.8, z: 0.0 }, &psys_box,
-                             4000, 0.001, hwnd, d3d_device.clone(), rng);
+            SprinklerPSystem::new(BASE_PATH, "sprinkler.fx", "SprinklerTech", "bolt.dds",
+                                  &D3DXVECTOR3 { x: -3.0, y: -9.8, z: 0.0 }, &psys_box,
+                                  2000, 0.003, hwnd, d3d_device.clone(), rng);
         psys.set_world_mtx(&psys_world);
 
         if let Some(gfx_stats) = &mut gfx_stats {
@@ -82,7 +85,7 @@ impl RainDemo {
             gfx_stats.add_triangles(terrain.get_num_triangles());
         }
 
-        let mut rain_demo = RainDemo {
+        let mut sprinkler_demo = SprinklerDemo {
             d3d_pp,
             gfx_stats,
 
@@ -90,9 +93,9 @@ impl RainDemo {
             psys,
         };
 
-        rain_demo.on_reset_device();
+        sprinkler_demo.on_reset_device();
 
-        Some(rain_demo)
+        Some(sprinkler_demo)
     }
 
     pub fn release_com_objects(&self) {

@@ -1,7 +1,7 @@
 pub mod camera;
-pub mod rain_demo;
+pub mod sprinkler_demo;
 pub mod terrain;
-mod rain_psystem;
+mod sprinkler_psystem;
 
 use rand::thread_rng;
 use windows::{
@@ -16,7 +16,7 @@ use common::*;
 use d3dx::*;
 use crate::camera::Camera;
 
-use crate::rain_demo::*;
+use crate::sprinkler_demo::*;
 
 // D3D App
 pub struct D3DApp {
@@ -27,7 +27,7 @@ pub struct D3DApp {
     requested_vp: i32,
     app_paused: bool,
     d3d_pp: D3DPRESENT_PARAMETERS,
-    rain_demo: Option<RainDemo>,
+    sprinkler_demo: Option<SprinklerDemo>,
 }
 
 // Unsafe global state
@@ -48,10 +48,10 @@ fn main() {
 
         if let Some(d3d_app) = &mut D3D_APP {
             if let Some(d3d_device) = D3D_DEVICE.clone() {
-                let rain_demo =
-                    RainDemo::new(d3d_app.get_main_wnd(), d3d_device.clone(),
-                                  &d3d_app.d3d_pp, thread_rng());
-                d3d_app.rain_demo = rain_demo;
+                let sprinkler_demo =
+                    SprinklerDemo::new(d3d_app.get_main_wnd(), d3d_device.clone(),
+                                       &d3d_app.d3d_pp, thread_rng());
+                d3d_app.sprinkler_demo = sprinkler_demo;
 
                 DIRECT_INPUT = DirectInput::new(d3d_app.app_inst,
                                                 d3d_app.main_wnd,
@@ -60,8 +60,8 @@ fn main() {
 
                 let exit_code = d3d_app.run();
 
-                if let Some(rain_demo) = &d3d_app.rain_demo {
-                    rain_demo.release_com_objects();
+                if let Some(sprinkler_demo) = &d3d_app.sprinkler_demo {
+                    sprinkler_demo.release_com_objects();
                 }
 
                 if let Some(dinput) = &DIRECT_INPUT {
@@ -85,7 +85,7 @@ impl D3DApp {
                 requested_vp,
                 app_paused: false,
                 d3d_pp: std::mem::zeroed(),
-                rain_demo: None,
+                sprinkler_demo: None,
             };
 
             d3d_app.init_main_window();
@@ -96,14 +96,14 @@ impl D3DApp {
     }
 
     fn on_lost_device(&mut self) {
-        if let Some(rain_demo) = &mut self.rain_demo {
-            rain_demo.on_lost_device();
+        if let Some(sprinkler_demo) = &mut self.sprinkler_demo {
+            sprinkler_demo.on_lost_device();
         }
     }
 
     fn on_reset_device(&mut self) {
-        if let Some(rain_demo) = &mut self.rain_demo {
-            rain_demo.on_reset_device();
+        if let Some(sprinkler_demo) = &mut self.sprinkler_demo {
+            sprinkler_demo.on_reset_device();
         }
     }
 
@@ -140,7 +140,7 @@ impl D3DApp {
 
             AdjustWindowRect(&mut r, WS_OVERLAPPEDWINDOW, false);
 
-            let main_wnd_caption = PSTR(b"Rain Demo\0".as_ptr() as _);
+            let main_wnd_caption = PSTR(b"Sprinkler Demo\0".as_ptr() as _);
 
             self.main_wnd = CreateWindowExA(
                 WINDOW_EX_STYLE(0),
@@ -277,9 +277,9 @@ impl D3DApp {
                         QueryPerformanceCounter(&mut curr_timestamp);
                         let dt: f32 = ((curr_timestamp - prev_timestamp) as f32) * secs_per_cnt;
 
-                        if let Some(rain_demo) = &mut self.rain_demo {
-                            rain_demo.update_scene(dt);
-                            rain_demo.draw_scene();
+                        if let Some(sprinkler_demo) = &mut self.sprinkler_demo {
+                            sprinkler_demo.update_scene(dt);
+                            sprinkler_demo.draw_scene();
                         }
 
                         // Prepare for next iteration: The current time stamp becomes
