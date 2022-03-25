@@ -1,10 +1,13 @@
 // Some utilities
 
+use rand::Rng;
+use rand::rngs::ThreadRng;
 use regex::Regex;
 
 use windows::{
     Win32::Foundation::*, Win32::UI::WindowsAndMessaging::*,
 };
+use d3dx::{D3DXVec3Normalize, D3DXVECTOR3};
 
 pub fn message_box(err_msg: &str) {
     unsafe {
@@ -54,14 +57,22 @@ pub fn clean_func_call(s: &str) -> String {
     tmp.chars().filter(|c| *c != '\n' && *c != '\r').collect()
 }
 
-// FIXME quick and dirty adapted way to calculate a random float based on a source rand int
-pub fn get_random_float(base_rand_int: i32, a: f32, b: f32) -> f32 {
+pub fn get_random_float(rng: &mut ThreadRng, a: f32, b: f32) -> f32 {
     if a >= b { // bad input
         return a
     }
 
     // Get random float in [0, 1] interval.
-    let f: f32 = (base_rand_int % 10001) as f32 * 0.0001;
-
+    let rand_int = rng.gen_range(0..32767);
+    let f: f32 = (rand_int % 10001) as f32 * 0.0001;
     (f * (b - a)) + a
+}
+
+pub fn get_random_vec(rng: &mut ThreadRng, out: &mut D3DXVECTOR3) {
+    out.x = get_random_float(rng, -1.0, 1.0);
+    out.y = get_random_float(rng, -1.0, 1.0);
+    out.z = get_random_float(rng, -1.0, 1.0);
+
+    // Project onto unit sphere.
+    D3DXVec3Normalize(out, out);
 }

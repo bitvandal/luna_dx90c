@@ -667,8 +667,7 @@ impl PropsDemo {
 
                 // Trees modeled to a different scale then ours, so scale them down to make sense.
                 // Also randomize the height a bit.
-                let rand_int = rng.gen_range(0..32767);
-                let tree_scale = get_random_float(rand_int, 0.15, 0.25);
+                let tree_scale = get_random_float(&mut rng, 0.15, 0.25);
 
                 // Build tree's world matrix.
                 D3DXMatrixTranslation(&mut t, x, y, z);
@@ -742,14 +741,11 @@ impl PropsDemo {
                     }
                 }
 
-                let rand_int1 = rng.gen_range(0..32767);
-                let sx: f32 = get_random_float(rand_int1, 0.75, 1.25);
+                let sx: f32 = get_random_float(&mut rng, 0.75, 1.25);
 
-                let rand_int2 = rng.gen_range(0..32767);
-                let sy: f32 = get_random_float(rand_int2, 0.75, 1.25);
+                let sy: f32 = get_random_float(&mut rng, 0.75, 1.25);
 
-                let rand_int3 = rng.gen_range(0..32767);
-                let sz: f32 = get_random_float(rand_int3, 0.75, 1.25);
+                let sz: f32 = get_random_float(&mut rng, 0.75, 1.25);
 
                 let pos = D3DXVECTOR3 { x, y, z };
                 let scale = D3DXVECTOR3 { x: sx, y: sy, z: sz };
@@ -797,8 +793,7 @@ impl PropsDemo {
             // Only top vertices have non-zero amplitudes:
             // The bottom vertices are fixed to the ground.
 
-            let rand_int = rng.gen_range(0..32767);
-            let amp = get_random_float(rand_int, 0.5, 1.0);
+            let amp = get_random_float(rng, 0.5, 1.0);
 
             let mut v_slice: &mut [VertexGrass] = from_raw_parts_mut(v.cast(), 4);
             v_slice[0] = VertexGrass {
@@ -854,9 +849,9 @@ impl PropsDemo {
 
                 // Generate random offset color (mostly green).
                 v_slice[i].color_offset = D3DCOLOR_RGBA!(
-                    (get_random_float(rng.gen_range(0..32767), 0.0, 0.1) * 255.0) as u32,
-                    (get_random_float(rng.gen_range(0..32767), 0.0, 0.2) * 255.0) as u32,
-                    (get_random_float(rng.gen_range(0..32767), 0.0, 0.1) * 255.0) as u32,
+                    (get_random_float(rng, 0.0, 0.1) * 255.0) as u32,
+                    (get_random_float(rng, 0.0, 0.2) * 255.0) as u32,
+                    (get_random_float(rng, 0.0, 0.1) * 255.0) as u32,
                     0);
             }
 

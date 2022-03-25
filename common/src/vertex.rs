@@ -36,6 +36,17 @@ pub struct VertexGrass {
     pub color_offset: D3DCOLOR,
 }
 
+#[derive(Default, Clone, Debug)]
+pub struct Particle {
+    pub initial_pos: D3DXVECTOR3,
+    pub initial_velocity: D3DXVECTOR3,
+    pub initial_size: f32, // In pixels.
+    pub initial_time: f32,
+    pub life_time: f32,
+    pub mass: f32,
+    pub initial_color: D3DCOLOR,
+}
+
 // Vertex declarations
 
 pub static mut VERTEX_POS_DECL: Option<IDirect3DVertexDeclaration9> = None;
@@ -44,6 +55,7 @@ pub static mut VERTEX_PN_DECL: Option<IDirect3DVertexDeclaration9> = None;
 pub static mut VERTEX_PNT_DECL: Option<IDirect3DVertexDeclaration9> = None;
 pub static mut VERTEX_PT_DECL: Option<IDirect3DVertexDeclaration9> = None;
 pub static mut VERTEX_GRASS: Option<IDirect3DVertexDeclaration9> = None;
+pub static mut PARTICLE_DECL: Option<IDirect3DVertexDeclaration9> = None;
 
 pub fn init_all_vertex_declarations(d3d_device: IDirect3DDevice9) {
     unsafe {
@@ -202,6 +214,68 @@ pub fn init_all_vertex_declarations(d3d_device: IDirect3DDevice9) {
         ];
 
         VERTEX_GRASS = Some(d3d_device.CreateVertexDeclaration(vertex_grass_elements.as_ptr()).unwrap());
+
+        let particle_elements: [D3DVERTEXELEMENT9; 8] = [
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 0,
+                Type: D3DDECLTYPE_FLOAT3.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_POSITION.0 as u8,
+                UsageIndex: 0
+            },
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 12,
+                Type: D3DDECLTYPE_FLOAT3.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_TEXCOORD.0 as u8,
+                UsageIndex: 0
+            },
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 24,
+                Type: D3DDECLTYPE_FLOAT1.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_TEXCOORD.0 as u8,
+                UsageIndex: 1
+            },
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 28,
+                Type: D3DDECLTYPE_FLOAT1.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_TEXCOORD.0 as u8,
+                UsageIndex: 2
+            },
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 32,
+                Type: D3DDECLTYPE_FLOAT1.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_TEXCOORD.0 as u8,
+                UsageIndex: 3
+            },
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 36,
+                Type: D3DDECLTYPE_FLOAT1.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_TEXCOORD.0 as u8,
+                UsageIndex: 4
+            },
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 40,
+                Type: D3DDECLTYPE_D3DCOLOR.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_COLOR.0 as u8,
+                UsageIndex: 0
+            },
+            D3DDECL_END!()
+        ];
+
+        PARTICLE_DECL = Some(d3d_device.CreateVertexDeclaration(particle_elements.as_ptr()).unwrap());
     }
 }
 
@@ -213,4 +287,5 @@ pub fn destroy_all_vertex_declarations() {
     // drop(vertex_pnt_decl);
     // drop(vertex_pt_decl);
     // drop(vertex_grass_decl);
+    // drop(particle_decl);
 }

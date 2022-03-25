@@ -256,6 +256,9 @@ extern {
     // HRESULT ID3DXBaseEffect::SetFloat(D3DXHANDLE hParameter, FLOAT f)
     fn D3DX_ID3DXBaseEffect_SetFloat(pEffect: *const c_void, hParameter: D3DXHANDLE, f: f32) -> D3DX_HRESULT;
 
+    // HRESULT ID3DXBaseEffect::SetInt(D3DXHANDLE hParameter, INT n)
+    fn D3DX_ID3DXBaseEffect_SetInt(pEffect: *const c_void, hParameter: D3DXHANDLE, n: i32) -> D3DX_HRESULT;
+
     // HRESULT SetTexture(D3DXHANDLE hParameter, LPDIRECT3DBASETEXTURE9 pTexture);
     fn D3DX_ID3DXBaseEffect_SetTexture(pEffect: *const c_void, hParameter: D3DXHANDLE, pTexture: *const c_void) -> D3DX_HRESULT;
 
@@ -618,6 +621,12 @@ pub fn ID3DXBaseEffect_SetMatrix(pEffect: *const c_void, hParameter: D3DXHANDLE,
 pub fn ID3DXBaseEffect_SetFloat(pEffect: *const c_void, hParameter: D3DXHANDLE, f: f32) -> Result<()> {
     unsafe { to_result(D3DX_ID3DXBaseEffect_SetFloat(pEffect, hParameter, f)) }
 }
+
+#[allow(non_snake_case)]
+pub fn ID3DXBaseEffect_SetInt(pEffect: *const c_void, hParameter: D3DXHANDLE, n: i32) -> Result<()> {
+    unsafe { to_result(D3DX_ID3DXBaseEffect_SetInt(pEffect, hParameter, n)) }
+}
+
 
 #[allow(non_snake_case)]
 pub fn ID3DXBaseEffect_SetTexture(pEffect: *const c_void, hParameter: D3DXHANDLE, pTexture: *const c_void) -> Result<()> {

@@ -1,17 +1,14 @@
 [package]
-name = "common"
+name = "luna_39_fire_ring_demo"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 libc = "0.2.0"
 rand = "0.8.4"
-regex = "1"
 
-[build-dependencies]
-cc = "1.0"
+[dependencies.common]
+path = "../common"
 
 [dependencies.d3dx]
 path = "../d3dx"
@@ -31,8 +28,3 @@ features = [
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_UI_WindowsAndMessaging",
 ]
-
-[dependencies.winapi]
-git = "https://github.com/mbilker/winapi-rs.git"
-branch = "0.3"
-features = ["dinput"]

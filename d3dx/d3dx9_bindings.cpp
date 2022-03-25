@@ -122,6 +122,10 @@ extern "C" HRESULT D3DX_ID3DXBaseEffect_SetFloat(LPD3DXBASEEFFECT self, D3DXHAND
     return self->SetFloat(hParameter, f);
 }
 
+extern "C" HRESULT D3DX_ID3DXBaseEffect_SetInt(LPD3DXBASEEFFECT self, D3DXHANDLE hParameter, INT n) {
+    return self->SetInt(hParameter, n);
+}
+
 extern "C" HRESULT D3DX_ID3DXBaseEffect_SetTexture(LPD3DXBASEEFFECT self, D3DXHANDLE hParameter, LPDIRECT3DBASETEXTURE9 pTexture) {
     return self->SetTexture(hParameter, pTexture);
 }
