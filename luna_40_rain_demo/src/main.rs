@@ -1,7 +1,7 @@
 pub mod camera;
-pub mod fire_ring_demo;
+pub mod rain_demo;
 pub mod terrain;
-mod fire_ring_psystem;
+mod rain_psystem;
 
 use rand::thread_rng;
 use windows::{
@@ -16,7 +16,7 @@ use common::*;
 use d3dx::*;
 use crate::camera::Camera;
 
-use crate::fire_ring_demo::*;
+use crate::rain_demo::*;
 
 // D3D App
 pub struct D3DApp {
@@ -27,7 +27,7 @@ pub struct D3DApp {
     requested_vp: i32,
     app_paused: bool,
     d3d_pp: D3DPRESENT_PARAMETERS,
-    fire_ring_demo: Option<FireRingDemo>,
+    fire_ring_demo: Option<RainDemo>,
 }
 
 // Unsafe global state
@@ -49,8 +49,8 @@ fn main() {
         if let Some(d3d_app) = &mut D3D_APP {
             if let Some(d3d_device) = D3D_DEVICE.clone() {
                 let fire_ring_demo =
-                    FireRingDemo::new(d3d_app.get_main_wnd(), d3d_device.clone(),
-                                      &d3d_app.d3d_pp, thread_rng());
+                    RainDemo::new(d3d_app.get_main_wnd(), d3d_device.clone(),
+                                  &d3d_app.d3d_pp, thread_rng());
                 d3d_app.fire_ring_demo = fire_ring_demo;
 
                 DIRECT_INPUT = DirectInput::new(d3d_app.app_inst,
