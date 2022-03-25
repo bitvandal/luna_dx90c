@@ -177,6 +177,14 @@ extern "C" DWORD D3DX_ID3DXBaseMesh_GetNumFaces(LPD3DXMESH self) {
     return self->GetNumFaces();
 }
 
+extern "C" HRESULT D3DX_ID3DXBaseMesh_GetVertexBuffer(LPD3DXMESH self, LPDIRECT3DVERTEXBUFFER9 *ppVB) {
+    return self->GetVertexBuffer(ppVB);
+}
+
+extern "C" HRESULT D3DX_ID3DXBaseMesh_GetIndexBuffer(LPD3DXMESH self, LPDIRECT3DINDEXBUFFER9 *ppIB) {
+    return self->GetIndexBuffer(ppIB);
+}
+
 extern "C" DWORD D3DX_ID3DXBaseMesh_GetNumBytesPerVertex(LPD3DXMESH self) {
     return self->GetNumBytesPerVertex();
 }
@@ -253,6 +261,12 @@ extern "C" HRESULT D3DX_CreateMesh(DWORD NumFaces, DWORD NumVertices, DWORD Opti
                                    const D3DVERTEXELEMENT9 *pDeclaration, LPDIRECT3DDEVICE9 pD3DDevice,
                                    LPD3DXMESH *ppMesh) {
     return D3DXCreateMesh(NumFaces, NumVertices, Options, pDeclaration, pD3DDevice, ppMesh);
+}
+
+extern "C" HRESULT D3DX_Intersect(LPD3DXBASEMESH pMesh, const D3DXVECTOR3 *pRayPos, const D3DXVECTOR3 *pRayDir,
+                                  BOOL *pHit, DWORD *pFaceIndex, FLOAT *pU, FLOAT *pV, FLOAT *pDist,
+                                  LPD3DXBUFFER *ppAllHits, DWORD *pCountOfHits) {
+    return D3DXIntersect(pMesh, pRayPos, pRayDir, pHit, pFaceIndex, pU, pV, pDist, ppAllHits, pCountOfHits);
 }
 
 // MATH

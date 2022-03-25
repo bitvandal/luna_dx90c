@@ -119,4 +119,8 @@ impl DirectInput {
     pub fn mouse_dz(&mut self) -> f32 {
         self.mouse_state.lZ as f32
     }
+
+    pub fn mouse_button_down(&mut self, button: u32) -> bool {
+        self.mouse_state.rgbButtons[button as usize] & 0x80 != 0
+    }
 }

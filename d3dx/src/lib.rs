@@ -149,6 +149,7 @@ pub const D3DXSHADER_USE_LEGACY_D3DX9_31_DLL: u32 = 1 << 16;
 
 // D3DX Mesh
 pub type LPD3DXMESH = *mut c_void;
+pub type LPD3DXBASEMESH = *mut c_void;
 pub const MAX_FVF_DECL_SIZE: u32 = MAXD3DDECLLENGTH + 1;
 
 // enum D3DXMESH
@@ -305,6 +306,12 @@ extern {
     // DWORD ID3DXBaseMesh::GetNumFaces();
     fn D3DX_ID3DXBaseMesh_GetNumFaces(pMesh: *const c_void) -> u32;
 
+    // HRESULT GetVertexBuffer(LPDIRECT3DVERTEXBUFFER9 *ppVB);
+    fn D3DX_ID3DXBaseMesh_GetVertexBuffer(pMesh: *const c_void, ppVB: *mut c_void) -> D3DX_HRESULT;
+
+    // HRESULT GetIndexBuffer(LPDIRECT3DINDEXBUFFER9 *ppIB);
+    fn D3DX_ID3DXBaseMesh_GetIndexBuffer(pMesh: *const c_void, ppIB: *mut c_void) -> D3DX_HRESULT;
+
     // DWORD GetNumBytesPerVertex();
     fn D3DX_ID3DXBaseMesh_GetNumBytesPerVertex(pMesh: *const c_void) -> u32;
 
@@ -373,6 +380,13 @@ extern {
     //                        LPD3DXMESH *ppMesh);
     fn D3DX_CreateMesh(NumFaces: u32, NumVertices: u32, Options: u32, pDeclaration: *const D3DVERTEXELEMENT9,
                        pD3DDevice: IDirect3DDevice9, ppMesh: *mut LPD3DXMESH) -> D3DX_HRESULT;
+
+    // HRESULT D3DXIntersect(LPD3DXBASEMESH pMesh, const D3DXVECTOR3 *pRayPos, const D3DXVECTOR3 *pRayDir,
+    //                       BOOL *pHit, DWORD *pFaceIndex, FLOAT *pU, FLOAT *pV, FLOAT *pDist,
+    //                       LPD3DXBUFFER *ppAllHits, DWORD *pCountOfHits);
+    fn D3DX_Intersect(pMesh: LPD3DXBASEMESH, pRayPos: &D3DXVECTOR3, pRayDir: &D3DXVECTOR3,
+                      pHit: &mut i32, pFaceIndex: &mut u32, pU: &mut f32, pV: &mut f32, pDist: &mut f32,
+                      ppAllHits: *mut LPD3DXBUFFER, pCountOfHits: &mut u32) -> D3DX_HRESULT;
 
     // MATH
 
@@ -690,6 +704,16 @@ pub fn ID3DXBaseMesh_GetNumFaces(pMesh: *const c_void) -> u32 {
 }
 
 #[allow(non_snake_case)]
+pub fn ID3DXBaseMesh_GetVertexBuffer(pMesh: *const c_void,  ppVB: *mut c_void) -> Result<()> {
+    unsafe { to_result(D3DX_ID3DXBaseMesh_GetVertexBuffer(pMesh, ppVB)) }
+}
+
+#[allow(non_snake_case)]
+pub fn ID3DXBaseMesh_GetIndexBuffer(pMesh: *const c_void,  ppIB: *mut c_void) -> Result<()> {
+    unsafe { to_result(D3DX_ID3DXBaseMesh_GetIndexBuffer(pMesh, ppIB)) }
+}
+
+#[allow(non_snake_case)]
 pub fn ID3DXBaseMesh_GetNumBytesPerVertex(pMesh: *const c_void) -> u32 {
     unsafe { D3DX_ID3DXBaseMesh_GetNumBytesPerVertex(pMesh) }
 }
@@ -791,6 +815,13 @@ pub fn D3DXComputeNormals(pMesh: LPD3DXMESH, pAdjacency: *const u32) -> Result<(
 pub fn D3DXCreateMesh(NumFaces: u32, NumVertices: u32, Options: u32, pDeclaration: *const D3DVERTEXELEMENT9,
                       pD3DDevice: IDirect3DDevice9, ppMesh: *mut LPD3DXMESH) -> Result<()> {
     unsafe { to_result(D3DX_CreateMesh(NumFaces, NumVertices, Options, pDeclaration, pD3DDevice, ppMesh)) }
+}
+
+#[allow(non_snake_case)]
+pub fn D3DXIntersect(pMesh: LPD3DXBASEMESH, pRayPos: &D3DXVECTOR3, pRayDir: &D3DXVECTOR3,
+                     pHit: &mut i32, pFaceIndex: &mut u32, pU: &mut f32, pV: &mut f32, pDist: &mut f32,
+                     ppAllHits: *mut LPD3DXBUFFER, pCountOfHits: &mut u32) -> Result<()> {
+    unsafe { to_result(D3DX_Intersect(pMesh, pRayPos, pRayDir, pHit, pFaceIndex, pU, pV, pDist, ppAllHits, pCountOfHits)) }
 }
 
 #[allow(non_snake_case)]
