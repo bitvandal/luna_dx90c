@@ -44,5 +44,6 @@ members = [
     "luna_40_rain_demo",
     "luna_41_sprinkler_demo",
     "luna_42_gun_demo",
-    "luna_43_tri_pick_demo"
+    "luna_43_tri_pick_demo",
+    "luna_44_asteroids_demo"
 ]

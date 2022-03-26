@@ -248,6 +248,11 @@ extern "C" HRESULT D3DX_LoadMeshFromX(LPCTSTR pFilename, DWORD Options, LPDIRECT
         ppEffectInstances, pNumMaterials, ppMesh);
 }
 
+extern "C" BOOL D3DX_BoxBoundProbe(const D3DXVECTOR3 *pMin, const D3DXVECTOR3 *pMax,
+                                  const D3DXVECTOR3 *pRayPosition, const D3DXVECTOR3 *pRayDirection) {
+    return D3DXBoxBoundProbe(pMin, pMax, pRayPosition, pRayDirection);
+}
+
 extern "C" HRESULT D3DX_ComputeBoundingBox(const D3DXVECTOR3 *pFirstPosition, DWORD NumVertices,
                                            DWORD dwStride, D3DXVECTOR3 *pMin, D3DXVECTOR3 *pMax) {
     return D3DXComputeBoundingBox(pFirstPosition, NumVertices, dwStride, pMin, pMax);

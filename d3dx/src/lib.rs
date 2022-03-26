@@ -367,6 +367,12 @@ extern {
                           ppEffectInstances: *mut LPD3DXBUFFER, pNumMaterials: *mut u32,
                           ppMesh: *mut LPD3DXMESH) -> D3DX_HRESULT;
 
+    // BOOL D3DXBoxBoundProbe(const D3DXVECTOR3 *pMin, const D3DXVECTOR3 *pMax,
+    //                        const D3DXVECTOR3 *pRayPosition, const D3DXVECTOR3 *pRayDirection);
+    #[allow(non_snake_case)]
+    pub fn D3DX_BoxBoundProbe(pMin: *const D3DXVECTOR3, pMax: *const D3DXVECTOR3,
+                              pRayPosition: *const D3DXVECTOR3, pRayDirection: *const D3DXVECTOR3) -> i32;
+
     // HRESULT D3DXComputeBoundingBox(const D3DXVECTOR3 *pFirstPosition, DWORD NumVertices,
     //                                DWORD dwStride, D3DXVECTOR3 *pMin, D3DXVECTOR3 *pMax);
     fn D3DX_ComputeBoundingBox(pFirstPosition: *const D3DXVECTOR3, NumVertices: u32,
@@ -799,6 +805,13 @@ pub fn D3DXLoadMeshFromX(pFilename: PSTR, Options: u32, pDevice: IDirect3DDevice
                                           ppMaterials, ppEffectInstances, pNumMaterials,
                                           ppMesh)) }
 }
+
+#[allow(non_snake_case)]
+pub fn D3DXBoxBoundProbe(pMin: *const D3DXVECTOR3, pMax: *const D3DXVECTOR3,
+                         pRayPosition: *const D3DXVECTOR3, pRayDirection: *const D3DXVECTOR3) -> i32 {
+    unsafe { D3DX_BoxBoundProbe(pMin, pMax, pRayPosition, pRayDirection) }
+}
+
 
 #[allow(non_snake_case)]
 pub fn D3DXComputeBoundingBox(pFirstPosition: *const D3DXVECTOR3, NumVertices: u32,
