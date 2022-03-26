@@ -24,6 +24,10 @@ extern "C" HRESULT D3DX_CreateTextureFromFile(LPDIRECT3DDEVICE9 pDevice, LPCTSTR
     return D3DXCreateTextureFromFile(pDevice, pSrcFile, ppTexture);
 }
 
+extern "C" HRESULT D3DX_CreateCubeTextureFromFile(LPDIRECT3DDEVICE9 pDevice, LPCTSTR pSrcFile, LPDIRECT3DCUBETEXTURE9 *ppCubeTexture) {
+    return D3DXCreateCubeTextureFromFile(pDevice, pSrcFile, ppCubeTexture);
+}
+
 extern "C" HRESULT D3DX_CreateEffectFromFile(LPDIRECT3DDEVICE9 pDevice, LPCTSTR pSrcFile, const D3DXMACRO *pDefines,
                                             LPD3DXINCLUDE pInclude, DWORD Flags, LPD3DXEFFECTPOOL pPool,
                                             LPD3DXEFFECT *ppEffect, LPD3DXBUFFER *ppCompilationErrors) {

@@ -196,6 +196,9 @@ extern {
     // HRESULT D3DXCreateTextureFromFile(LPDIRECT3DDEVICE9 pDevice, LPCTSTR pSrcFile, LPDIRECT3DTEXTURE9 *ppTexture);
     fn D3DX_CreateTextureFromFile(pDevice: IDirect3DDevice9, pSrcFile: PSTR, ppTexture: *mut *mut c_void) -> D3DX_HRESULT;
 
+    // HRESULT D3DXCreateCubeTextureFromFile(LPDIRECT3DDEVICE9 pDevice, LPCTSTR pSrcFile, LPDIRECT3DCUBETEXTURE9 *ppCubeTexture);
+    fn D3DX_CreateCubeTextureFromFile(pDevice: IDirect3DDevice9, pSrcFile: PSTR, ppTexture: *mut *mut c_void) -> D3DX_HRESULT;
+
     // HRESULT ID3DXSprite::Begin(DWORD Flags);
     fn D3DX_ID3DXSprite_Begin(pSprite: *const c_void, flags: u32) -> D3DX_HRESULT;
 
@@ -537,6 +540,11 @@ pub fn D3DXCreateSprite(pDevice: IDirect3DDevice9, ppSprite: &mut *mut c_void) -
 #[allow(non_snake_case)]
 pub fn D3DXCreateTextureFromFile(pDevice: IDirect3DDevice9, pSrcFile: PSTR, ppTexture: &mut *mut c_void) -> Result<()> {
     unsafe { to_result(D3DX_CreateTextureFromFile(pDevice, pSrcFile, ppTexture)) }
+}
+
+#[allow(non_snake_case)]
+pub fn D3DXCreateCubeTextureFromFile(pDevice: IDirect3DDevice9, pSrcFile: PSTR, ppTexture: &mut *mut c_void) -> Result<()> {
+    unsafe { to_result(D3DX_CreateCubeTextureFromFile(pDevice, pSrcFile, ppTexture)) }
 }
 
 #[allow(non_snake_case)]
