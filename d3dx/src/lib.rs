@@ -83,6 +83,7 @@ impl D3DXVECTOR4 {
 pub const D3DX_PI: f32 = std::f32::consts::PI;
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct D3DXCOLOR {
     pub r: f32,
     pub g: f32,

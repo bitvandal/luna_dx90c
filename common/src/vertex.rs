@@ -287,9 +287,6 @@ pub fn init_all_vertex_declarations(d3d_device: IDirect3DDevice9) {
 
         PARTICLE_DECL = Some(d3d_device.CreateVertexDeclaration(particle_elements.as_ptr()).unwrap());
 
-
-
-
         let nmap_vertex_elements: [D3DVERTEXELEMENT9; 6] = [
             D3DVERTEXELEMENT9 {
                 Stream: 0,
@@ -335,7 +332,6 @@ pub fn init_all_vertex_declarations(d3d_device: IDirect3DDevice9) {
         ];
 
         NMAP_VERTEX_DECL = Some(d3d_device.CreateVertexDeclaration(nmap_vertex_elements.as_ptr()).unwrap());
-
     }
 }
 
