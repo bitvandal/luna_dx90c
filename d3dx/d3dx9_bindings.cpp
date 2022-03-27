@@ -4,6 +4,15 @@
 #include <d3d9.h>
 #include <d3dx9.h>
 
+// D3D9 bindings
+
+extern "C" HRESULT D3DX_IDirect3DTexture9_GetSurfaceLevel(LPDIRECT3DTEXTURE9 self, UINT Level,
+                                                          IDirect3DSurface9 **ppSurfaceLevel) {
+    return self->GetSurfaceLevel(Level, ppSurfaceLevel);
+}
+
+// D3DX Misc
+
 extern "C" void D3DX_Release(IUnknown *self) {
     if (self) {
         /*ULONG *refcount = */self->Release();
@@ -16,6 +25,11 @@ extern "C" HRESULT D3DX_CreateFontIndirect(LPDIRECT3DDEVICE9 pDevice, const D3DX
     return D3DXCreateFontIndirect(pDevice, pDesc, ppFont);
 }
 
+extern "C" HRESULT D3DX_CreateRenderToSurface(LPDIRECT3DDEVICE9 pDevice, UINT Width, UINT Height, D3DFORMAT Format, BOOL DepthStencil,
+                                              D3DFORMAT DepthStencilFormat, LPD3DXRENDERTOSURFACE *ppRenderToSurface) {
+    return D3DXCreateRenderToSurface(pDevice, Width, Height, Format, DepthStencil, DepthStencilFormat, ppRenderToSurface);
+}
+
 extern "C" HRESULT D3DX_CreateSprite(LPDIRECT3DDEVICE9 pDevice, LPD3DXSPRITE *ppSprite) {
     return D3DXCreateSprite(pDevice, ppSprite);
 }
@@ -26,6 +40,11 @@ extern "C" HRESULT D3DX_CreateTextureFromFile(LPDIRECT3DDEVICE9 pDevice, LPCTSTR
 
 extern "C" HRESULT D3DX_CreateCubeTextureFromFile(LPDIRECT3DDEVICE9 pDevice, LPCTSTR pSrcFile, LPDIRECT3DCUBETEXTURE9 *ppCubeTexture) {
     return D3DXCreateCubeTextureFromFile(pDevice, pSrcFile, ppCubeTexture);
+}
+
+extern "C" HRESULT D3DX_CreateTexture(LPDIRECT3DDEVICE9 pDevice, UINT Width, UINT Height, UINT MipLevels, DWORD Usage,
+                                      D3DFORMAT Format, D3DPOOL Pool, LPDIRECT3DTEXTURE9 *ppTexture) {
+    return D3DXCreateTexture(pDevice, Width, Height, MipLevels, Usage, Format, Pool, ppTexture);
 }
 
 extern "C" HRESULT D3DX_CreateEffectFromFile(LPDIRECT3DDEVICE9 pDevice, LPCTSTR pSrcFile, const D3DXMACRO *pDefines,
@@ -288,6 +307,17 @@ extern "C" HRESULT D3DX_Intersect(LPD3DXBASEMESH pMesh, const D3DXVECTOR3 *pRayP
                                   BOOL *pHit, DWORD *pFaceIndex, FLOAT *pU, FLOAT *pV, FLOAT *pDist,
                                   LPD3DXBUFFER *ppAllHits, DWORD *pCountOfHits) {
     return D3DXIntersect(pMesh, pRayPos, pRayDir, pHit, pFaceIndex, pU, pV, pDist, ppAllHits, pCountOfHits);
+}
+
+// RENDER TO SURFACE
+
+extern "C" HRESULT D3DX_ID3DXRenderToSurface_BeginScene(LPD3DXRENDERTOSURFACE pRenderToSurface,
+                                                        LPDIRECT3DSURFACE9 pSurface, const D3DVIEWPORT9 *pViewport) {
+    return pRenderToSurface->BeginScene(pSurface, pViewport);
+}
+
+extern "C" HRESULT D3DX_ID3DXRenderToSurface_EndScene(LPD3DXRENDERTOSURFACE pRenderToSurface, DWORD MipFilter) {
+    return pRenderToSurface->EndScene(MipFilter);
 }
 
 // MATH

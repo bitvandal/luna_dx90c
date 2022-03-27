@@ -7,8 +7,26 @@ use windows::{
     core::*, Win32::Foundation::*, Win32::Graphics::Direct3D::*, Win32::Graphics::Direct3D9::*,
 };
 
+// D3D9
+
 // D3DCOLOR is equivalent to D3DFMT_A8R8G8B8
 type D3DCOLOR = u32;
+
+#[allow(non_snake_case)]
+#[link(name = "../dependencies/d3dx9", kind = "static")]
+#[link(name = "d3dx9_bindings", kind = "static")]
+extern {
+    // HRESULT GetSurfaceLevel(UINT Level, IDirect3DSurface9 **ppSurfaceLevel);
+    fn D3DX_IDirect3DTexture9_GetSurfaceLevel(texture: *mut c_void, Level: u32, ppSurfaceLevel: *mut *mut c_void) -> D3DX_HRESULT;
+}
+
+#[allow(non_snake_case)]
+pub fn IDirect3DTexture9_GetSurfaceLevel(texture: *mut c_void, Level: u32, ppSurfaceLevel: *mut *mut c_void) -> Result<()> {
+    unsafe { to_result(D3DX_IDirect3DTexture9_GetSurfaceLevel(texture, Level, ppSurfaceLevel)) }
+}
+
+
+// D3DX9
 
 // struct D3DXFONT_DESCA (ANSI)
 #[allow(non_snake_case)]
@@ -128,6 +146,9 @@ type D3DX_HRESULT = i32;
 // D3DX EFFECT
 pub type LPD3DXEFFECT = *mut c_void;
 
+// D3DX RENDER TO SURFACE
+pub type LPD3DXRENDERTOSURFACE = *mut c_void;
+
 // D3DX SHADER
 pub type D3DXHANDLE = *const c_void; // technically it is normally a LPCSTR
 
@@ -147,6 +168,10 @@ pub const D3DXSHADER_PREFER_FLOW_CONTROL: u32 = 1 << 10;
 pub const D3DXSHADER_ENABLE_BACKWARDS_COMPATIBILITY: u32 = 1 << 12;
 pub const D3DXSHADER_IEEE_STRICTNESS: u32 = 1 << 13;
 pub const D3DXSHADER_USE_LEGACY_D3DX9_31_DLL: u32 = 1 << 16;
+
+// D3DX_FILTER flags
+
+pub const D3DX_FILTER_NONE: u32 = 1 << 0;
 
 // D3DX Mesh
 pub type LPD3DXMESH = *mut c_void;
@@ -179,6 +204,11 @@ extern {
     // HRESULT D3DXCreateFontIndirect(LPDIRECT3DDEVICE9 pDevice, const D3DXFONT_DESC *pDesc, LPD3DXFONT *ppFont);
     fn D3DX_CreateFontIndirect(pDevice: IDirect3DDevice9, pDesc: *const D3DXFONT_DESC, ppFont: *mut *mut c_void) -> D3DX_HRESULT;
 
+    // HRESULT D3DXCreateRenderToSurface(LPDIRECT3DDEVICE9 pDevice, UINT Width, UINT Height, D3DFORMAT Format, BOOL DepthStencil,
+    //                                   D3DFORMAT DepthStencilFormat, LPD3DXRENDERTOSURFACE *ppRenderToSurface);
+    fn D3DX_CreateRenderToSurface(pDevice: IDirect3DDevice9, Width: u32, Height: u32, Format: D3DFORMAT, DepthStencil: i32,
+                                  DepthStencilFormat: D3DFORMAT, ppRenderToSurface: *mut LPD3DXRENDERTOSURFACE) -> D3DX_HRESULT;
+
     // HRESULT ID3DXFont::OnLostDevice()
     fn D3DX_ID3DXFont_OnLostDevice(pFont: *const c_void) -> D3DX_HRESULT;
 
@@ -199,6 +229,11 @@ extern {
 
     // HRESULT D3DXCreateCubeTextureFromFile(LPDIRECT3DDEVICE9 pDevice, LPCTSTR pSrcFile, LPDIRECT3DCUBETEXTURE9 *ppCubeTexture);
     fn D3DX_CreateCubeTextureFromFile(pDevice: IDirect3DDevice9, pSrcFile: PSTR, ppTexture: *mut *mut c_void) -> D3DX_HRESULT;
+
+    // HRESULT D3DXCreateTexture(LPDIRECT3DDEVICE9 pDevice, UINT Width, UINT Height, UINT MipLevels, DWORD Usage,
+    //                           D3DFORMAT Format, D3DPOOL Pool, LPDIRECT3DTEXTURE9 *ppTexture);
+    fn D3DX_CreateTexture(pDevice: IDirect3DDevice9, Width: u32, Height: u32, MipLevels: u32, Usage: u32,
+                          Format: D3DFORMAT, Pool: D3DPOOL, ppTexture: &mut *mut c_void) -> D3DX_HRESULT;
 
     // HRESULT ID3DXSprite::Begin(DWORD Flags);
     fn D3DX_ID3DXSprite_Begin(pSprite: *const c_void, flags: u32) -> D3DX_HRESULT;
@@ -411,6 +446,15 @@ extern {
                       pHit: &mut i32, pFaceIndex: &mut u32, pU: &mut f32, pV: &mut f32, pDist: &mut f32,
                       ppAllHits: *mut LPD3DXBUFFER, pCountOfHits: &mut u32) -> D3DX_HRESULT;
 
+    // RENDER TO TEXTURE
+
+    // HRESULT BeginScene(LPDIRECT3DSURFACE9 pSurface, const D3DVIEWPORT9 *pViewport);
+    fn D3DX_ID3DXRenderToSurface_BeginScene(pRenderToSurface: *const c_void, pSurface: *const c_void,
+                                            pViewport: *const D3DVIEWPORT9) -> D3DX_HRESULT;
+
+    // HRESULT EndScene(DWORD MipFilter);
+    fn D3DX_ID3DXRenderToSurface_EndScene(pRenderToSurface: *const c_void, MipFilter: u32) -> D3DX_HRESULT;
+
     // MATH
 
     // D3DXVECTOR3* D3DXVec3Scale(D3DXVECTOR3 *pOut, const D3DXVECTOR3 *pV, FLOAT s)
@@ -531,6 +575,13 @@ pub fn D3DXCreateFontIndirect(pDevice: IDirect3DDevice9, font_desc: D3DXFONT_DES
 }
 
 #[allow(non_snake_case)]
+pub fn D3DXCreateRenderToSurface(pDevice: IDirect3DDevice9, Width: u32, Height: u32, Format: D3DFORMAT, DepthStencil: i32,
+                                 DepthStencilFormat: D3DFORMAT, ppRenderToSurface: *mut LPD3DXRENDERTOSURFACE) -> Result<()> {
+    unsafe { to_result(D3DX_CreateRenderToSurface(pDevice, Width, Height, Format, DepthStencil, DepthStencilFormat, ppRenderToSurface)) }
+}
+
+
+#[allow(non_snake_case)]
 pub fn ID3DXFont_DrawText(pFont: *const c_void, pSprite: *const c_void, pString: PSTR, Count: i32,
                           pRect: &RECT, Format: u32, Color: D3DCOLOR) -> i32 {
     unsafe { D3DX_ID3DXFont_DrawText(pFont, pSprite, pString, Count, pRect, Format, Color) }
@@ -560,6 +611,14 @@ pub fn D3DXCreateTextureFromFile(pDevice: IDirect3DDevice9, pSrcFile: PSTR, ppTe
 pub fn D3DXCreateCubeTextureFromFile(pDevice: IDirect3DDevice9, pSrcFile: PSTR, ppTexture: &mut *mut c_void) -> Result<()> {
     unsafe { to_result(D3DX_CreateCubeTextureFromFile(pDevice, pSrcFile, ppTexture)) }
 }
+
+#[allow(non_snake_case)]
+pub fn D3DXCreateTexture(pDevice: IDirect3DDevice9, Width: u32, Height: u32, MipLevels: u32, Usage: u32,
+                         Format: D3DFORMAT, Pool: D3DPOOL, ppTexture: &mut *mut c_void) -> Result<()> {
+    unsafe { to_result(D3DX_CreateTexture(pDevice, Width, Height, MipLevels, Usage, Format, Pool, ppTexture)) }
+}
+
+
 
 #[allow(non_snake_case)]
 pub fn ID3DXSprite_Begin(pSprite: *const c_void, flags: u32) -> Result<()> {
@@ -892,6 +951,17 @@ fn D3DXVec4Add(pOut: *mut D3DXVECTOR4, pV1: *const D3DXVECTOR4, pV2: *const D3DX
 #[allow(non_snake_case)]
 fn D3DXVec4Subtract(pOut: *mut D3DXVECTOR4, pV1: *const D3DXVECTOR4, pV2: *const D3DXVECTOR4) -> *mut D3DXVECTOR4 {
     unsafe { D3DX_Vec4Subtract(pOut, pV1, pV2) }
+}
+
+#[allow(non_snake_case)]
+pub fn ID3DXRenderToSurface_BeginScene(pRenderToSurface: *const c_void, pSurface: *const c_void,
+                                       pViewport: *const D3DVIEWPORT9) -> Result<()> {
+    unsafe { to_result(D3DX_ID3DXRenderToSurface_BeginScene(pRenderToSurface, pSurface, pViewport)) }
+}
+
+#[allow(non_snake_case)]
+pub fn ID3DXRenderToSurface_EndScene(pRenderToSurface: *const c_void, MipFilter: u32) -> Result<()> {
+    unsafe { to_result(D3DX_ID3DXRenderToSurface_EndScene(pRenderToSurface, MipFilter)) }
 }
 
 #[allow(non_snake_case)]

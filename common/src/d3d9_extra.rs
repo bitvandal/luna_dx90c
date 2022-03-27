@@ -33,9 +33,18 @@ macro_rules! MAKE_D3DHRESULT {
     }
 }
 
+#[allow(non_snake_case)]
+macro_rules! MAKE_D3DSTATUS {
+    ($code:expr) => {
+        MAKE_HRESULT!(0, _FACD3D, $code)
+    }
+}
+
+pub const D3D_OK: HRESULT = HRESULT(0);
 pub const D3DERR_DRIVERINTERNALERROR: HRESULT = MAKE_D3DHRESULT!(2087);
 pub const D3DERR_DEVICELOST: HRESULT = MAKE_D3DHRESULT!(2152);
 pub const D3DERR_DEVICENOTRESET: HRESULT = MAKE_D3DHRESULT!(2153);
+pub const D3DOK_NOAUTOGEN: HRESULT = MAKE_D3DSTATUS!(2159);
 
 // D3DCOLOR is equivalent to D3DFMT_A8R8G8B8
 pub type D3DCOLOR = u32;
