@@ -266,6 +266,18 @@ extern "C" HRESULT D3DX_ComputeNormals(LPD3DXBASEMESH pMesh, const DWORD *pAdjac
     return D3DXComputeNormals(pMesh, pAdjacency);
 }
 
+extern "C" HRESULT D3DX_ComputeTangentFrameEx(ID3DXMesh *pMesh, DWORD dwTextureInSemantic, DWORD dwTextureInIndex,
+        DWORD dwUPartialOutSemantic, DWORD dwUPartialOutIndex, DWORD dwVPartialOutSemantic, DWORD dwVPartialOutIndex,
+        DWORD dwNormalOutSemantic, DWORD dwNormalOutIndex, DWORD dwOptions, const DWORD *pdwAdjacency,
+        FLOAT fPartialEdgeThreshold, FLOAT fSingularPointThreshold, FLOAT fNormalEdgeThreshold,
+        ID3DXMesh **ppMeshOut, ID3DXBuffer **ppVertexMapping) {
+    return D3DXComputeTangentFrameEx(pMesh, dwTextureInSemantic, dwTextureInIndex,
+               dwUPartialOutSemantic, dwUPartialOutIndex, dwVPartialOutSemantic, dwVPartialOutIndex,
+               dwNormalOutSemantic, dwNormalOutIndex, dwOptions, pdwAdjacency,
+               fPartialEdgeThreshold, fSingularPointThreshold, fNormalEdgeThreshold,
+               ppMeshOut, ppVertexMapping);
+}
+
 extern "C" HRESULT D3DX_CreateMesh(DWORD NumFaces, DWORD NumVertices, DWORD Options,
                                    const D3DVERTEXELEMENT9 *pDeclaration, LPDIRECT3DDEVICE9 pD3DDevice,
                                    LPD3DXMESH *ppMesh) {

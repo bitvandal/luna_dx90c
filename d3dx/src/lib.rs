@@ -384,6 +384,19 @@ extern {
     // HRESULT D3DXComputeNormals(LPD3DXBASEMESH pMesh, const DWORD *pAdjacency);
     fn D3DX_ComputeNormals(pMesh: LPD3DXMESH, pAdjacency: *const u32) -> D3DX_HRESULT;
 
+    // HRESULT D3DXComputeTangentFrameEx(ID3DXMesh *pMesh, DWORD dwTextureInSemantic, DWORD dwTextureInIndex,
+    //                      DWORD dwUPartialOutSemantic, DWORD dwUPartialOutIndex, DWORD dwVPartialOutSemantic,
+    //                      DWORD dwVPartialOutIndex, DWORD dwNormalOutSemantic, DWORD dwNormalOutIndex,
+    //                      DWORD dwOptions, const DWORD *pdwAdjacency, FLOAT fPartialEdgeThreshold,
+    //                      FLOAT fSingularPointThreshold, FLOAT fNormalEdgeThreshold, ID3DXMesh **ppMeshOut,
+    //                      ID3DXBuffer **ppVertexMapping);
+    fn D3DX_ComputeTangentFrameEx(pMesh: LPD3DXMESH, dwTextureInSemantic: u32, dwTextureInIndex: u32,
+                                  dwUPartialOutSemantic: u32, dwUPartialOutIndex: u32, dwVPartialOutSemantic: u32,
+                                  dwVPartialOutIndex: u32, dwNormalOutSemantic: u32, dwNormalOutIndex: u32,
+                                  dwOptions: u32, pdwAdjacency: *const u32, fPartialEdgeThreshold: f32,
+                                  fSingularPointThreshold: f32, fNormalEdgeThreshold: f32,
+                                  ppMeshOut: *mut LPD3DXMESH, ppVertexMapping: *mut LPD3DXBUFFER) -> D3DX_HRESULT;
+
     // HRESULT D3DXCreateMesh(DWORD NumFaces, DWORD NumVertices, DWORD Options,
     //                        const D3DVERTEXELEMENT9 *pDeclaration, LPDIRECT3DDEVICE9 pD3DDevice,
     //                        LPD3DXMESH *ppMesh);
@@ -830,6 +843,21 @@ pub fn D3DXComputeBoundingBox(pFirstPosition: *const D3DXVECTOR3, NumVertices: u
 #[allow(non_snake_case)]
 pub fn D3DXComputeNormals(pMesh: LPD3DXMESH, pAdjacency: *const u32) -> Result<()> {
     unsafe { to_result(D3DX_ComputeNormals(pMesh, pAdjacency)) }
+}
+
+#[allow(non_snake_case)]
+pub fn D3DXComputeTangentFrameEx(pMesh: LPD3DXMESH, dwTextureInSemantic: u32, dwTextureInIndex: u32,
+                                 dwUPartialOutSemantic: u32, dwUPartialOutIndex: u32, dwVPartialOutSemantic: u32,
+                                 dwVPartialOutIndex: u32, dwNormalOutSemantic: u32, dwNormalOutIndex: u32,
+                                 dwOptions: u32, pdwAdjacency: *const u32, fPartialEdgeThreshold: f32,
+                                 fSingularPointThreshold: f32, fNormalEdgeThreshold: f32,
+                                 ppMeshOut: *mut LPD3DXMESH, ppVertexMapping: *mut LPD3DXBUFFER) -> Result<()> {
+    unsafe { to_result(D3DX_ComputeTangentFrameEx(pMesh, dwTextureInSemantic, dwTextureInIndex,
+                                                       dwUPartialOutSemantic, dwUPartialOutIndex, dwVPartialOutSemantic,
+                                                       dwVPartialOutIndex, dwNormalOutSemantic, dwNormalOutIndex,
+                                                       dwOptions, pdwAdjacency, fPartialEdgeThreshold,
+                                                       fSingularPointThreshold, fNormalEdgeThreshold,
+                                                       ppMeshOut, ppVertexMapping)) }
 }
 
 #[allow(non_snake_case)]

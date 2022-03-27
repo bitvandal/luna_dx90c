@@ -47,6 +47,15 @@ pub struct Particle {
     pub initial_color: D3DCOLOR,
 }
 
+pub struct NMapVertex {
+    pub pos: D3DXVECTOR3,
+    pub tangent: D3DXVECTOR3,
+    pub binormal: D3DXVECTOR3,
+    pub normal: D3DXVECTOR3,
+    pub tex0: D3DXVECTOR2,
+}
+
+
 // Vertex declarations
 
 pub static mut VERTEX_POS_DECL: Option<IDirect3DVertexDeclaration9> = None;
@@ -56,6 +65,7 @@ pub static mut VERTEX_PNT_DECL: Option<IDirect3DVertexDeclaration9> = None;
 pub static mut VERTEX_PT_DECL: Option<IDirect3DVertexDeclaration9> = None;
 pub static mut VERTEX_GRASS: Option<IDirect3DVertexDeclaration9> = None;
 pub static mut PARTICLE_DECL: Option<IDirect3DVertexDeclaration9> = None;
+pub static mut NMAP_VERTEX_DECL: Option<IDirect3DVertexDeclaration9> = None;
 
 pub fn init_all_vertex_declarations(d3d_device: IDirect3DDevice9) {
     unsafe {
@@ -276,6 +286,56 @@ pub fn init_all_vertex_declarations(d3d_device: IDirect3DDevice9) {
         ];
 
         PARTICLE_DECL = Some(d3d_device.CreateVertexDeclaration(particle_elements.as_ptr()).unwrap());
+
+
+
+
+        let nmap_vertex_elements: [D3DVERTEXELEMENT9; 6] = [
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 0,
+                Type: D3DDECLTYPE_FLOAT3.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_POSITION.0 as u8,
+                UsageIndex: 0
+            },
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 12,
+                Type: D3DDECLTYPE_FLOAT3.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_TANGENT.0 as u8,
+                UsageIndex: 0
+            },
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 24,
+                Type: D3DDECLTYPE_FLOAT3.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_BINORMAL.0 as u8,
+                UsageIndex: 0
+            },
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 36,
+                Type: D3DDECLTYPE_FLOAT3.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_NORMAL.0 as u8,
+                UsageIndex: 0
+            },
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 48,
+                Type: D3DDECLTYPE_FLOAT2.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_TEXCOORD.0 as u8,
+                UsageIndex: 0
+            },
+            D3DDECL_END!()
+        ];
+
+        NMAP_VERTEX_DECL = Some(d3d_device.CreateVertexDeclaration(nmap_vertex_elements.as_ptr()).unwrap());
+
     }
 }
 
@@ -288,4 +348,5 @@ pub fn destroy_all_vertex_declarations() {
     // drop(vertex_pt_decl);
     // drop(vertex_grass_decl);
     // drop(particle_decl);
+    // drop(nmap_vertex_decl);
 }
