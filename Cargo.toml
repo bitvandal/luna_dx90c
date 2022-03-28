@@ -50,5 +50,6 @@ members = [
     "luna_46_bricks_demo",
     "luna_47_water_demo",
     "luna_48_render_to_tex_demo",
-    "luna_49_proj_tex_demo"
+    "luna_49_proj_tex_demo",
+    "luna_50_shadow_map_demo"
 ]
