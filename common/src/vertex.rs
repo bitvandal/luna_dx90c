@@ -55,6 +55,11 @@ pub struct NMapVertex {
     pub tex0: D3DXVECTOR2,
 }
 
+pub struct WaterDMapVertex {
+    pub pos: D3DXVECTOR3,
+    pub scaled_tex_c: D3DXVECTOR2,      // [a, b]
+    pub normalized_tex_c: D3DXVECTOR2,  // [0, 1]
+}
 
 // Vertex declarations
 
@@ -66,6 +71,7 @@ pub static mut VERTEX_PT_DECL: Option<IDirect3DVertexDeclaration9> = None;
 pub static mut VERTEX_GRASS: Option<IDirect3DVertexDeclaration9> = None;
 pub static mut PARTICLE_DECL: Option<IDirect3DVertexDeclaration9> = None;
 pub static mut NMAP_VERTEX_DECL: Option<IDirect3DVertexDeclaration9> = None;
+pub static mut WATER_DMAP_VERTEX_DECL: Option<IDirect3DVertexDeclaration9> = None;
 
 pub fn init_all_vertex_declarations(d3d_device: IDirect3DDevice9) {
     unsafe {
@@ -332,6 +338,37 @@ pub fn init_all_vertex_declarations(d3d_device: IDirect3DDevice9) {
         ];
 
         NMAP_VERTEX_DECL = Some(d3d_device.CreateVertexDeclaration(nmap_vertex_elements.as_ptr()).unwrap());
+
+        let water_dmap_vertex_elements: [D3DVERTEXELEMENT9; 4] = [
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 0,
+                Type: D3DDECLTYPE_FLOAT3.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_POSITION.0 as u8,
+                UsageIndex: 0
+            },
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 12,
+                Type: D3DDECLTYPE_FLOAT2.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_TEXCOORD.0 as u8,
+                UsageIndex: 0
+            },
+            D3DVERTEXELEMENT9 {
+                Stream: 0,
+                Offset: 20,
+                Type: D3DDECLTYPE_FLOAT2.0 as u8,
+                Method: D3DDECLMETHOD_DEFAULT.0 as u8,
+                Usage: D3DDECLUSAGE_TEXCOORD.0 as u8,
+                UsageIndex: 1
+            },
+            D3DDECL_END!()
+        ];
+
+        WATER_DMAP_VERTEX_DECL = Some(d3d_device.CreateVertexDeclaration(water_dmap_vertex_elements.as_ptr()).unwrap());
+
     }
 }
 
@@ -345,4 +382,5 @@ pub fn destroy_all_vertex_declarations() {
     // drop(vertex_grass_decl);
     // drop(particle_decl);
     // drop(nmap_vertex_decl);
+    // drop(water_dmap_vertex_decl);
 }

@@ -54,6 +54,8 @@ pub struct D3DXMATERIAL {
 
 // D3DX Core
 
+pub const D3DX_DEFAULT: u32 = u32::MAX;
+
 pub type LPD3DXBUFFER = *mut c_void;
 
 // D3DX Math
@@ -226,6 +228,15 @@ extern {
 
     // HRESULT D3DXCreateTextureFromFile(LPDIRECT3DDEVICE9 pDevice, LPCTSTR pSrcFile, LPDIRECT3DTEXTURE9 *ppTexture);
     fn D3DX_CreateTextureFromFile(pDevice: IDirect3DDevice9, pSrcFile: PSTR, ppTexture: *mut *mut c_void) -> D3DX_HRESULT;
+
+    // HRESULT D3DXCreateTextureFromFileEx(LPDIRECT3DDEVICE9 pDevice, LPCTSTR pSrcFile, UINT Width, UINT Height,
+    //                                     UINT MipLevels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool, DWORD Filter,
+    //                                     DWORD MipFilter, D3DCOLOR ColorKey, D3DXIMAGE_INFO *pSrcInfo,
+    //                                     PALETTEENTRY *pPalette, LPDIRECT3DTEXTURE9 *ppTexture);
+    fn D3DX_CreateTextureFromFileEx(pDevice: IDirect3DDevice9, pSrcFile: PSTR, Width: u32, Height: u32,
+                                    MipLevels: u32, Usage: u32, Format: D3DFORMAT, Pool: D3DPOOL,
+                                    Filter: u32, MipFilter: u32, ColorKey: D3DCOLOR, pSrcInfo: *mut c_void,
+                                    pPalette: *mut c_void, ppTexture: &mut *mut c_void) -> D3DX_HRESULT;
 
     // HRESULT D3DXCreateCubeTextureFromFile(LPDIRECT3DDEVICE9 pDevice, LPCTSTR pSrcFile, LPDIRECT3DCUBETEXTURE9 *ppCubeTexture);
     fn D3DX_CreateCubeTextureFromFile(pDevice: IDirect3DDevice9, pSrcFile: PSTR, ppTexture: *mut *mut c_void) -> D3DX_HRESULT;
@@ -605,6 +616,16 @@ pub fn D3DXCreateSprite(pDevice: IDirect3DDevice9, ppSprite: &mut *mut c_void) -
 #[allow(non_snake_case)]
 pub fn D3DXCreateTextureFromFile(pDevice: IDirect3DDevice9, pSrcFile: PSTR, ppTexture: &mut *mut c_void) -> Result<()> {
     unsafe { to_result(D3DX_CreateTextureFromFile(pDevice, pSrcFile, ppTexture)) }
+}
+
+#[allow(non_snake_case)]
+pub fn D3DXCreateTextureFromFileEx(pDevice: IDirect3DDevice9, pSrcFile: PSTR, Width: u32, Height: u32,
+                                   MipLevels: u32, Usage: u32, Format: D3DFORMAT, Pool: D3DPOOL,
+                                   Filter: u32, MipFilter: u32, ColorKey: D3DCOLOR, pSrcInfo: *mut c_void /* D3DXIMAGE_INFO * */,
+                                   pPalette: *mut c_void/* PALETTEENTRY * */, ppTexture: &mut *mut c_void) -> Result<()> {
+    unsafe { to_result(D3DX_CreateTextureFromFileEx(pDevice, pSrcFile, Width, Height, MipLevels,
+                                                         Usage, Format, Pool, Filter, MipFilter, ColorKey,
+                                                         pSrcInfo, pPalette, ppTexture)) }
 }
 
 #[allow(non_snake_case)]

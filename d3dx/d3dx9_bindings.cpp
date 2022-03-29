@@ -38,6 +38,13 @@ extern "C" HRESULT D3DX_CreateTextureFromFile(LPDIRECT3DDEVICE9 pDevice, LPCTSTR
     return D3DXCreateTextureFromFile(pDevice, pSrcFile, ppTexture);
 }
 
+extern "C" HRESULT D3DX_CreateTextureFromFileEx(LPDIRECT3DDEVICE9 pDevice, LPCTSTR pSrcFile, UINT Width, UINT Height,
+        UINT MipLevels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool, DWORD Filter, DWORD MipFilter, D3DCOLOR ColorKey,
+        D3DXIMAGE_INFO *pSrcInfo, PALETTEENTRY *pPalette, LPDIRECT3DTEXTURE9 *ppTexture) {
+    return D3DXCreateTextureFromFileEx(pDevice, pSrcFile, Width, Height, MipLevels, Usage, Format, Pool, Filter,
+                                       MipFilter, ColorKey, pSrcInfo, pPalette, ppTexture);
+}
+
 extern "C" HRESULT D3DX_CreateCubeTextureFromFile(LPDIRECT3DDEVICE9 pDevice, LPCTSTR pSrcFile, LPDIRECT3DCUBETEXTURE9 *ppCubeTexture) {
     return D3DXCreateCubeTextureFromFile(pDevice, pSrcFile, ppCubeTexture);
 }
